@@ -14,7 +14,8 @@ from sklearn.model_selection import KFold
 import time
 from const import SEED
 from msgspec import Struct, Meta, yaml
-
+from optimizer import *
+from scheduler import *
 torch.manual_seed(SEED)
 # torch.backends.cudnn.benchmark = True
 # torch.backends.cudnn.deterministic = False
@@ -26,8 +27,11 @@ class DLConfig(Struct):
     merge_train_val : bool = False
     k_fold : int | None = None
     unfreeze_layers : int = 0
-    lr: float = 0.1
-    weight_decay: float = 0.01
+    num_epochs : int = 5
+    batch_size : int = 32
+    num_workers : int = 4
+    optimizer: Optimizer
+    scheduler: Scheduler
 
 class Classifier:
     CHECKPOINT_PATH = "training_checkpoint.pth"
@@ -127,22 +131,19 @@ class Classifier:
             print(f"解冻最后 {layers_to_unfreeze} 层参数")
         self.model.to(self.device)
 
-    def prepare_train(self, beta1=0.9, beta2=0.999):
+    def prepare_train(self):
+        self.criterion = torch.nn.CrossEntropyLoss()
         # class_weights = self.get_class_weights()
         # self.criterion = torch.nn.CrossEntropyLoss(weight=class_weights.to(self.device), label_smoothing=0.1)
-        self.criterion = torch.nn.CrossEntropyLoss()
         trainable_params = filter(lambda p: p.requires_grad, self.model.parameters())
-        self.optimizer = torch.optim.AdamW(
-            trainable_params, 
-            lr=self.config.lr, 
-            weight_decay=self.config.weight_decay,
-            betas=(beta1, beta2)  # 调整beta参数
-        )
+        self.optimizer = self.build_optimizer()
+        assert self.optimizer is not None, "No Optimizer..."
         # self.scheduler = torch.optim.lr_scheduler.OneCycleLR(
         #     self.optimizer, max_lr=0.005, epochs=20, 
         #     pct_start=0.2, steps_per_epoch=len(train_loader)
         # )
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=5, gamma=0.1)
+        self.scheduler = self.build_scheduler()
+        assert self.scheduler is not None, "No Scheduler..."
         # self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         #     self.optimizer, 
         #     mode='max', 
@@ -161,24 +162,31 @@ class Classifier:
         #     lr_lambda=lambda epoch: min(1.0, (epoch + 1) / self.warmup_epochs)
         # )
 
-    def create_data_loaders(self, train_idx=None, val_idx=None):
-        if self.k_fold and train_idx is not None and val_idx is not None:
-            train_subset = Subset(self.full_dataset, train_idx)
-            val_subset = Subset(self.full_dataset, val_idx)
-        else:
-            train_subset = self.train_dataset
-            val_subset = self.val_dataset
+    def build_optimizer(self):
+        match type(self.config.optimizer):
+            case AdamW:
+                return torch.optim.AdamW(
+                    trainable_params, 
+                    lr=self.config.optimizer.lr, 
+                    weight_decay=self.config.optimizer.weight_decay,
+                    betas=(
+                        self.config.optimizer.beta1, 
+                        self.config.optimizer.beta2
+                    )  # 调整beta参数
+                )
+            case SGD:
+                pass
 
-        batch_size = 32
-        train_loader = DataLoader(
-            train_subset, batch_size=batch_size, shuffle=True,
-            num_workers=4, pin_memory=True, persistent_workers=True,
-        )
-        val_loader = DataLoader(
-            val_subset, batch_size=batch_size, shuffle=False,
-            num_workers=4, pin_memory=True, persistent_workers=True,
-        )
-        return train_loader, val_loader
+    def build_scheduler(self):
+        match type(self.config.scheduler):
+            case OneCycleLR:
+                pass
+            case StepLR:
+                return torch.optim.lr_scheduler.StepLR(
+                    self.optimizer, 
+                    step_size=self.config.scheduler.step_size, 
+                    gamma=self.config.scheduler.gamma
+                )
 
     def get_class_weights(self):
         labels = self.train_dataset.labels
@@ -191,8 +199,6 @@ class Classifier:
             class_weights[class_idx] = total_samples / (len(class_counts) * count)
         return torch.tensor([class_weights[i] for i in sorted(class_weights.keys())])
 
-    
-       
     def load_kfold_checkpoint(self, fold):
         checkpoint_path = self.KFOLD_CHECKPOINT_PATH.format(fold=fold)
         if os.path.exists(checkpoint_path):
@@ -246,10 +252,11 @@ class Classifier:
         }, self.CHECKPOINT_PATH)
         print(f"检查点已保存: epoch {epoch + 1}")
            
-    def train_epoch(self, train_loader, epoch, num_epochs):
+    def train_epoch(self, train_loader, epoch):
         if torch.cuda.memory_allocated() > 0.8 * torch.cuda.max_memory_allocated():
             torch.cuda.empty_cache()
             
+        num_epochs = self.config.num_epochs
         total_samples = len(train_loader.dataset)
         self.model.train()
         running_loss = 0.0
@@ -293,7 +300,29 @@ class Classifier:
         val_acc = 100 * val_correct / val_total if val_total > 0 else 0
         return val_loss, val_acc
             
-    def train_process(self, num_epochs=10, start_epoch=0, train_scores=[], validation_scores=[]):
+    def common_process_temp(self, load_checkpoint, save_checkpoint, fold=None): # TODO: bad naming
+        start_epoch, train_scores, validation_scores = load_checkpoint(fold) if fold else load_checkpoint()
+        train_loader, val_loader = self.create_data_loaders()
+        print(f"从 epoch {start_epoch + 1} 开始，共 {num_epochs} 轮")
+        for epoch in range(start_epoch, num_epochs):
+            train_loss, train_acc = self.train_epoch(train_loader, epoch)
+            val_loss, val_acc = self.validate_epoch(val_loader)
+            train_scores.append(train_acc)
+            validation_scores.append(val_acc)
+            print(  
+                f"Epoch [{epoch+1}/{num_epochs}]: "
+                f"Train Loss: {train_loss:.4f}; Train Acc: {train_acc:.2f}% - "
+                f"Val Loss: {val_loss:.4f}; Val Acc: {val_acc:.2f}%"
+            )
+            self.scheduler.step()
+            if fold:
+                save_checkpoint(fold, epoch, train_scores, validation_scores)
+            else:
+                save_checkpoint(epoch, train_scores, validation_scores)
+        return train_scores, validation_scores
+
+    def train_process(self):
+        num_epochs = self.config.num_epochs
         if self.k_fold:
             fold_results = []
             for fold, (train_idx, val_idx) in enumerate(self.kf.split(range(len(self.full_dataset)))):
@@ -301,69 +330,58 @@ class Classifier:
                 train_loader, val_loader = self.create_data_loaders(train_idx, val_idx)
                 
                 # 重置模型和优化器
-                self.build_model(model_name, unfreeze_layers=3)
-                # self.warmup_epochs = min(5, num_epochs//4)  # 预热epoch数
-                self.prepare_train(
-                    lr=0.005,
-                    weight_decay=0.001,
-                    beta1=0.9 - fold*0.01,  # 每折微调beta1
-                    beta2=0.999 - fold*0.0001  # 每折微调beta2
-                )
-                start_epoch, train_scores, val_scores = self.load_kfold_checkpoint(fold)
+                self.build_model()
+                self.config.optimizer.beta1 -= fold * 0.01,  # 每折微调beta1
+                self.config.optimizer.beta2 -= fold * 0.0001  # 每折微调beta2
+                self.prepare_train()
                 
-                for epoch in range(start_epoch, num_epochs):
-                    # if epoch < self.warmup_epochs:
-                    #     self.warmup_scheduler.step()
-                    train_loss, train_acc = self.train_epoch(train_loader, epoch, num_epochs)
-                    val_loss, val_acc = self.validate_epoch(val_loader)
-                    
-                    train_scores.append(train_acc)
-                    val_scores.append(val_acc)
-                    
-                    print(  f"Epoch [{epoch+1}/{num_epochs}]: "
-                            f"Train Loss: {train_loss:.4f}; Train Acc: {train_acc:.2f}% - "
-                            f"Val Loss: {val_loss:.4f}; Val Acc: {val_acc:.2f}%")
-                    # if epoch >= self.warmup_epochs:
-                    self.scheduler.step()
-                    self.save_kfold_checkpoint(fold, epoch, train_scores, val_scores)
+                train_scores, validation_scores = common_process_temp(self, self.load_kfold_checkpoint, self.save_kfold_checkpoint, fold)
                 fold_results.append((train_scores, val_scores))
                 print(f"--- 完成第 {fold + 1}/{self.k_fold} 折 ---")
             
             # 计算平均性能
             avg_train_scores = np.mean([res[0] for res in fold_results], axis=0)
             avg_val_scores = np.mean([res[1] for res in fold_results], axis=0)
-            self.plot_train_valid(avg_train_scores, avg_val_scores, num_epochs)
+            self.plot_train_valid(avg_train_scores, avg_val_scores)
         else:
-            train_loader, val_loader = self.create_data_loaders()
-            print(f"从 epoch {start_epoch + 1} 开始，共 {num_epochs} 轮")
-            # warmup_epochs = min(5, num_epochs//4)
-            for epoch in range(start_epoch, num_epochs):
-                # if epoch < warmup_epochs:
-                #     for param_group in self.optimizer.param_groups:
-                #         param_group['lr'] = 0.001 * (epoch + 1) / warmup_epochs
-                train_loss, train_acc = self.train_epoch(train_loader, epoch, num_epochs)
-                val_loss, val_acc = self.validate_epoch(val_loader)
-                train_scores.append(train_acc)
-                validation_scores.append(val_acc)
-                
-                print(  f"Epoch [{epoch+1}/{num_epochs}]: "
-                        f"Train Loss: {train_loss:.4f}; Train Acc: {train_acc:.2f}% - "
-                        f"Val Loss: {val_loss:.4f}; Val Acc: {val_acc:.2f}%")
-                self.scheduler.step()
-                # if epoch > num_epochs // 2:
-                #     self.warmup_scheduler.step()
-                self.save_checkpoint(epoch, train_scores, validation_scores)
-                
-            self.plot_train_valid(train_scores, validation_scores, num_epochs)
+            train_scores, validation_scores = common_process_temp(self, classifer.load_checkpoint, self.save_checkpoint)
+            self.plot_train_valid(train_scores, validation_scores)
         
-        if os.path.exists(self.CHECKPOINT_PATH):
-            os.remove(self.CHECKPOINT_PATH)
-            print("训练完成，检查点已删除")
+            if os.path.exists(self.CHECKPOINT_PATH):
+                os.remove(self.CHECKPOINT_PATH)
+                print("训练完成，检查点已删除")
     
+    def create_data_loaders(self, train_idx=None, val_idx=None):
+        if self.k_fold and train_idx is not None and val_idx is not None:
+            train_subset = Subset(self.full_dataset, train_idx)
+            val_subset = Subset(self.full_dataset, val_idx)
+        else:
+            train_subset = self.train_dataset
+            val_subset = self.val_dataset
+
+        batch_size = self.config.batch_size
+        num_workers = self.config.num_workers
+        train_loader = DataLoader(
+            train_subset, batch_size=batch_size, shuffle=True,
+            num_workers=num_workers, 
+            pin_memory=True, persistent_workers=True,
+        )
+        val_loader = DataLoader(
+            val_subset, batch_size=batch_size, shuffle=False,
+            num_workers=num_workers, 
+            pin_memory=True, persistent_workers=True,
+        )
+        return train_loader, val_loader
+
     def create_submission(self, output_file="submission.csv"):
         self.model.eval()
         predictions = []
-        test_loader = DataLoader(self.test_dataset, batch_size=32, num_workers=4, shuffle=False)
+        test_loader = DataLoader(
+            self.test_dataset, 
+            batch_size=self.config.batch_size, 
+            num_workers=self.config.num_workers, 
+            shuffle=False
+        )
         
         with torch.no_grad():
             for images, _ in tqdm(test_loader, desc="生成预测结果"):
@@ -380,7 +398,8 @@ class Classifier:
         submission_df.to_csv(output_file, index=False)
         print(f"提交文件已保存: {output_file}")
                 
-    def plot_train_valid(self, train_scores, validation_scores, num_epochs):
+    def plot_train_valid(self, train_scores, validation_scores):
+        num_epochs = self.config.num_epochs
         plt.plot(range(1, num_epochs + 1), train_scores, 'o-', color='r', label='Training score')
         plt.plot(range(1, num_epochs + 1), validation_scores, 'o-', color='g', label='Validation score')
         
@@ -398,16 +417,11 @@ if __name__ == "__main__":
     # data_root = "./IS_2025_OrganAMNIST"
     # model_name = 'efficientnet_med'
     classifer = Classifier(config, categories)
-    classifer.build_model(model_name, unfreeze_layers=3)
+    classifer.build_model()
     classifer.prepare_train()
-    start_epoch, train_scores, validation_scores = classifer.load_checkpoint()
-    classifer.train_process(
-        num_epochs=20, start_epoch=start_epoch, 
-        train_scores=train_scores, 
-        validation_scores=validation_scores
-    )
+    classifer.train_process()
     print("生成提交文件...")
-    classifer.create_submission(f"{model_name.split('_')[0]}_submission.csv")
+    classifer.create_submission(f"{config.model_name.split('_')[0]}_submission.csv")
     
     
     
