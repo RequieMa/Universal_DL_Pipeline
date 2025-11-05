@@ -1,0 +1,10 @@
+%YAML 1.2
+---
+data_root: "./IS_2025_OrganAMNIST"
+model_name: "efficientnet_med"
+image_size: 224
+merge_train_val: true
+k_fold: 3
+unfreeze_layers: 3
+lr: 0.01
+weight_decay: 0.01

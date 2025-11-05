@@ -12,52 +12,49 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.model_selection import KFold
 import time
+from const import SEED
+from msgspec import Struct, Meta, yaml
 
-torch.manual_seed(2019)
+torch.manual_seed(SEED)
 # torch.backends.cudnn.benchmark = True
 # torch.backends.cudnn.deterministic = False
 
-class EarlyStopper:
-    def __init__(self, patience=5, min_delta=0.01):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.counter = 0
-        self.min_validation_loss = float('inf')
-        self.best_model_state = None
-
-    def early_stop(self, validation_loss, model):
-        if validation_loss < self.min_validation_loss:
-            self.min_validation_loss = validation_loss
-            self.counter = 0
-            self.best_model_state = model.state_dict().copy()
-            return False
-        elif validation_loss > (self.min_validation_loss + self.min_delta):
-            self.counter += 1
-            if self.counter >= self.patience:
-                return True
-        return False
+class DLConfig(Struct):
+    data_root : str
+    model_name : str
+    image_size : int = 224
+    merge_train_val : bool = False
+    k_fold : int | None = None
+    unfreeze_layers : int = 0
+    lr: float = 0.1
+    weight_decay: float = 0.01
 
 class Classifier:
     CHECKPOINT_PATH = "training_checkpoint.pth"
     KFOLD_CHECKPOINT_PATH = "kfold_checkpoint_{fold}.pth"
     
-    def __init__(self, data_root, categories, merge_train_val=False, k_fold=None):
+    def __init__(self, config, categories):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"使用设备: {self.device}")
-        self.data_root = data_root
-        self.merge_train_val = merge_train_val
-        self.k_fold = k_fold
+        self.config = config
         
-        if k_fold:
-            self.full_dataset, self.test_dataset, self.k_fold = load_datasets(
-                self.data_root, image_size=224, 
-                merge_train_val=merge_train_val, k_fold=k_fold
+        if self.config.k_fold:
+            self.full_dataset, _, self.test_dataset = load_datasets(
+                self.config.data_root, 
+                image_size=self.config.image_size, 
+                merge_train_val=self.config.merge_train_val, 
+                k_fold=self.config.k_fold
             )
-            self.kf = KFold(n_splits=k_fold, shuffle=True, random_state=2019)
+            self.kf = KFold(
+                n_splits=self.config.k_fold, 
+                shuffle=True, 
+                random_state=SEED
+            )
         else:
             self.train_dataset, self.val_dataset, self.test_dataset = load_datasets(
-                self.data_root, image_size=224, 
-                merge_train_val=merge_train_val
+                self.config.data_root, 
+                image_size=self.config.image_size, 
+                merge_train_val=self.config.merge_train_val,
             )
         
         self.num_classes = len(categories)
@@ -66,27 +63,10 @@ class Classifier:
         self.criterion = None
         self.optimizer = None
 
-    def create_data_loaders(self, train_idx=None, val_idx=None):
-        if self.k_fold and train_idx is not None and val_idx is not None:
-            train_subset = Subset(self.full_dataset, train_idx)
-            val_subset = Subset(self.full_dataset, val_idx)
-        else:
-            train_subset = self.train_dataset
-            val_subset = self.val_dataset
-
-        batch_size = 32
-        train_loader = DataLoader(
-            train_subset, batch_size=batch_size, shuffle=True,
-            num_workers=4, pin_memory=True, persistent_workers=True,
-        )
-        val_loader = DataLoader(
-            val_subset, batch_size=batch_size, shuffle=False,
-            num_workers=4, pin_memory=True, persistent_workers=True,
-        )
-        return train_loader, val_loader
-
-    def build_model(self, model_name, unfreeze_layers=0):  # 默认改为单通道
+    def build_model(self):  # 默认改为单通道
         net = None
+        model_name = self.config.model_name
+        unfreeze_layers = self.config.unfreeze_layers
         match model_name:
             case 'efficientnet_v2_s': 
                 from model_generation import EfficientNet
@@ -134,40 +114,28 @@ class Classifier:
         assert net is not None, "No Net..."
         net.replace_feature()
         net.replace_head()
+
         self.model = net.model
         self.head_module = net.head_module
         if unfreeze_layers > 0:
-            total_layers = len(list(self.model.children()))
-            layers_to_unfreeze = min(unfreeze_layers, total_layers)
-            
             children = list(self.model.children())
+            total_layers = len(children)
+            layers_to_unfreeze = min(unfreeze_layers, total_layers)
             for child in children[-layers_to_unfreeze:]:
                 for param in child.parameters():
                     param.requires_grad = True
             print(f"解冻最后 {layers_to_unfreeze} 层参数")
-        
         self.model.to(self.device)
-            
-    def get_class_weights(self):
-        labels = self.train_dataset.labels
-        class_counts = Counter(labels)
-        total_samples = len(labels)
-        class_weights = {}
-        
-        for class_idx, count in class_counts.items():
-            # 使用逆频率加权，给少数类更高权重
-            class_weights[class_idx] = total_samples / (len(class_counts) * count)
-        return torch.tensor([class_weights[i] for i in sorted(class_weights.keys())])
 
-    def prepare_train(self, lr=0.01, weight_decay=0.01, beta1=0.9, beta2=0.999):
+    def prepare_train(self, beta1=0.9, beta2=0.999):
         # class_weights = self.get_class_weights()
         # self.criterion = torch.nn.CrossEntropyLoss(weight=class_weights.to(self.device), label_smoothing=0.1)
         self.criterion = torch.nn.CrossEntropyLoss()
         trainable_params = filter(lambda p: p.requires_grad, self.model.parameters())
         self.optimizer = torch.optim.AdamW(
             trainable_params, 
-            lr=lr, 
-            weight_decay=weight_decay,
+            lr=self.config.lr, 
+            weight_decay=self.config.weight_decay,
             betas=(beta1, beta2)  # 调整beta参数
         )
         # self.scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -192,6 +160,38 @@ class Classifier:
         #     self.optimizer,
         #     lr_lambda=lambda epoch: min(1.0, (epoch + 1) / self.warmup_epochs)
         # )
+
+    def create_data_loaders(self, train_idx=None, val_idx=None):
+        if self.k_fold and train_idx is not None and val_idx is not None:
+            train_subset = Subset(self.full_dataset, train_idx)
+            val_subset = Subset(self.full_dataset, val_idx)
+        else:
+            train_subset = self.train_dataset
+            val_subset = self.val_dataset
+
+        batch_size = 32
+        train_loader = DataLoader(
+            train_subset, batch_size=batch_size, shuffle=True,
+            num_workers=4, pin_memory=True, persistent_workers=True,
+        )
+        val_loader = DataLoader(
+            val_subset, batch_size=batch_size, shuffle=False,
+            num_workers=4, pin_memory=True, persistent_workers=True,
+        )
+        return train_loader, val_loader
+
+    def get_class_weights(self):
+        labels = self.train_dataset.labels
+        class_counts = Counter(labels)
+        total_samples = len(labels)
+        class_weights = {}
+        
+        for class_idx, count in class_counts.items():
+            # 使用逆频率加权，给少数类更高权重
+            class_weights[class_idx] = total_samples / (len(class_counts) * count)
+        return torch.tensor([class_weights[i] for i in sorted(class_weights.keys())])
+
+    
        
     def load_kfold_checkpoint(self, fold):
         checkpoint_path = self.KFOLD_CHECKPOINT_PATH.format(fold=fold)
@@ -393,9 +393,11 @@ class Classifier:
         plt.close()
                         
 if __name__ == "__main__":
-    classifer = Classifier("./IS_2025_OrganAMNIST", categories, merge_train_val=True, k_fold=3)
-    # classifer = Classifier("./IS_2025_OrganAMNIST", categories, merge_train_val=True)
-    model_name = 'efficientnet_med'
+    with open("config.yaml", "rb") as f:                      # read as bytes
+        config = yaml.decode(f.read(), type=DLConfig)
+    # data_root = "./IS_2025_OrganAMNIST"
+    # model_name = 'efficientnet_med'
+    classifer = Classifier(config, categories)
     classifer.build_model(model_name, unfreeze_layers=3)
     classifer.prepare_train()
     start_epoch, train_scores, validation_scores = classifer.load_checkpoint()

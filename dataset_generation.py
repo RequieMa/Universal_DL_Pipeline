@@ -7,9 +7,10 @@ import torch
 from torch.utils.data import Dataset, ConcatDataset, random_split
 from torchvision import transforms
 import cv2
+from const import SEED
 
-torch.manual_seed(2019)
-np.random.seed(2019)
+torch.manual_seed(SEED)
+np.random.seed(SEED)
 
 categories = [
     "Spleen", "Right kidney", "Left kidney", 
@@ -107,7 +108,6 @@ class CustomDataset(Dataset):
 
 
 def get_transforms(image_size=224):
-    # 训练专用变换（包含增强）
     train_transform = transforms.Compose([
         transforms.Resize(image_size),
         transforms.RandomAffine(
@@ -121,45 +121,43 @@ def get_transforms(image_size=224):
         transforms.Normalize([0.5], [0.5])
     ])
     
-    # 验证/测试专用变换（无增强）
-    val_transform = transforms.Compose([
+    test_transform = transforms.Compose([
         transforms.Resize(image_size),
         transforms.ToTensor(),
         transforms.Normalize([0.5], [0.5])
     ])
-    return train_transform, val_transform
+    return train_transform, test_transform
 
 def load_datasets(data_root, image_size=224, merge_train_val=False, k_fold=None):
     train_dir = os.path.join(data_root, "train", "images_train")
     val_dir = os.path.join(data_root, "val", "images_val")
     test_dir = os.path.join(data_root, "test", "images")
     
-    # 假设标签文件在相应目录中
     train_label_file = os.path.join(data_root, "train", "labels_train.csv")
     val_label_file = os.path.join(data_root, "val", "labels_val.csv")
     test_idx_file = os.path.join(data_root, "test", "manifest_public.csv")
     
     # 获取变换
-    train_transform, val_transform = get_transforms(image_size)
+    train_transform, test_transform = get_transforms(image_size)
     
     # 加载数据集
     train_dataset = CustomDataset(train_dir, label_file=train_label_file, transform=train_transform)
-    val_dataset = CustomDataset(val_dir, label_file=val_label_file, transform=val_transform)
-    test_dataset = CustomDataset(test_dir, transform=val_transform, test_index_file=test_idx_file)
+    val_dataset = CustomDataset(val_dir, label_file=val_label_file, transform=test_transform)
+    test_dataset = CustomDataset(test_dir, transform=test_transform, test_index_file=test_idx_file)
     
     if merge_train_val:
         full_dataset = ConcatDataset([train_dataset, val_dataset])
         
         if k_fold:
             print(f"使用 {k_fold}折交叉验证")
-            return full_dataset, test_dataset, k_fold
+            return full_dataset, None, test_dataset
         else:
             # 按8:2比例分割
             train_size = int(0.8 * len(full_dataset))
             val_size = len(full_dataset) - train_size
             train_dataset, val_dataset = random_split(
                 full_dataset, [train_size, val_size],
-                generator=torch.Generator().manual_seed(2019)
+                generator=torch.Generator().manual_seed(SEED)
             )
             print(f"合并后数据集分割: 训练集={len(train_dataset)}, 验证集={len(val_dataset)}")
     
@@ -167,13 +165,15 @@ def load_datasets(data_root, image_size=224, merge_train_val=False, k_fold=None)
     print(f"验证集: {len(val_dataset)} 张图片")
     print(f"测试集: {len(test_dataset)} 张图片")
     
+    dataset_distribution(train_dataset, "训练集")
+    dataset_distribution(val_dataset, "验证集")
+    return train_dataset, val_dataset, test_dataset
+
+def dataset_distribution(dataset, dataset_type):
     # 打印类别分布
-    if hasattr(train_dataset, 'labels') and -1 not in train_dataset.labels:
-        label_counts = Counter(train_dataset.labels)
-        print("训练集类别分布:")
+    if hasattr(dataset, 'labels') and -1 not in dataset.labels:
+        label_counts = Counter(dataset.labels)
+        print(f"{dataset_type}类别分布:")
         for label_idx, count in label_counts.items():
             label_name = idx_to_label.get(label_idx, f"未知({label_idx})")
             print(f"  {label_name}: {count} 张")
-            
-    return train_dataset, val_dataset, test_dataset
-
