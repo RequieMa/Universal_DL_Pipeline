@@ -1,0 +1,23 @@
+%YAML 1.2
+---
+data_root: "./data"
+model_name: "efficientnet_med"
+image_size: 224
+merge_train_val: true
+k_fold: null
+unfreeze_layers: 3
+num_epochs: 20
+batch_size: 32
+num_workers: 4
+
+optimizer:
+  name: adamw
+  lr: 0.01
+  weight_decay: 0.01
+  beta1: 0.9
+  beta2: 0.999
+
+scheduler:
+  name: adamw
+  step_size: 5
+  gamma: 0.1
