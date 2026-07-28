@@ -71,6 +71,45 @@ M7 (LLM landscape)              examples/ only; may add pipeline modules, no API
 | Nesting depth | ≤ 3 | Readability |
 | Cyclomatic complexity | ≤ 10 | One clear path |
 
+### Property Usage
+
+Prefer `@property` for derived/read-only attributes over getter methods or direct
+attribute access. Properties make the API feel like attribute access while keeping
+computation lazy and the interface stable.
+
+```python
+# ✔ Good — property for derived value
+class PipelineState:
+    mode: Literal["train", "infer"]
+    @property
+    def is_training(self) -> bool:
+        return self.mode == "train"
+
+class NumpyModel:
+    _parameters: list[Parameter]
+    @property
+    def num_parameters(self) -> int:
+        return len(self._parameters)
+
+# ✘ Avoid — getter methods when a property would be clearer
+class PipelineState:
+    def get_is_training(self) -> bool: ...
+
+# ✘ Avoid — public attribute when the value might become computed later
+class PipelineState:
+    is_training: bool   # would need migration if made computed
+```
+
+| Use `@property` when | Use a method when | Use a plain attribute when |
+|----------------------|-------------------|---------------------------|
+| Value is derived from other state | Has side effects (e.g., writes to disk) | Simple stored value, no future computation |
+| Read-only by design | Takes arguments beyond `self` | Mutable, no validation needed |
+| Might become computed later (API stability) | Expensive computation (signal intent) | Trivial flag with no derivation |
+
+**Rationale**: `@property` lets the API start simple and evolve. A plain attribute
+`state.is_training = True` breaks when you later need it computed from `mode`.
+A property `state.is_training` works identically whether it's stored or derived.
+
 Forbidden patterns:
 - Closures capturing mutable state (see dl_framework `hpo.py` lesson)
 - `if task_type == "..."` branching (SOLID violation)
@@ -210,6 +249,11 @@ class PipelineState:
     predictions: ArrayLike | None = None
     current_epoch: int = 0
     should_stop: bool = False
+
+    @property
+    def is_training(self) -> bool:
+        """Derived from mode. Safe to query in any stage."""
+        return self.mode == "train"
 
 class BasePipeline(ABC):
     """Universal DL pipeline template.
