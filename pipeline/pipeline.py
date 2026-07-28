@@ -8,6 +8,7 @@ The pipeline defines *when* stages run. Concrete implementations define
 """
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -19,6 +20,8 @@ if TYPE_CHECKING:
     from pipeline.config import Config
     from pipeline.hooks import BaseHook
     from pipeline.protocols import DataStream, LossProtocol, ModelProtocol, OptimizerProtocol
+
+_logger = logging.getLogger(__name__)
 
 ArrayLike = np.ndarray | Any
 
@@ -220,9 +223,6 @@ class BasePipeline(ABC):
         self._notify("on_stage_start", name, state)
         try:
             stage_fn(state)
-        except Exception:
-            # Stage failures are critical -- re-raise
-            raise
         finally:
             self._notify("on_stage_end", name, state)
 
@@ -236,9 +236,6 @@ class BasePipeline(ABC):
             event: Hook method name (e.g., ``"on_stage_start"``).
             *args: Arguments forwarded to the hook method.
         """
-        import logging
-
-        _logger = logging.getLogger(__name__)
         for hook in self._hooks:
             try:
                 getattr(hook, event)(*args)
