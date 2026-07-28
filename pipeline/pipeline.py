@@ -9,6 +9,7 @@ The pipeline defines *when* stages run. Concrete implementations define
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -16,6 +17,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     from pipeline.config import Config
+    from pipeline.hooks import BaseHook
     from pipeline.protocols import DataStream, LossProtocol, ModelProtocol, OptimizerProtocol
 
 ArrayLike = np.ndarray | Any
@@ -72,18 +74,177 @@ class PipelineState:
 
 
 class BasePipeline(ABC):
-    """Abstract base for concrete pipeline implementations.
+    """Universal deep learning pipeline template.
 
-    Subclasses implement each of the six stages. The public
-    entry points are :meth:`run` and :meth:`infer`.
+    Defines *when* six stages run. Subclasses define *how* each stage
+    works by implementing the abstract methods. Hooks inject
+    cross-cutting concerns (logging, checkpoint, early-stop).
+
+    The six stages are:
+        1. :meth:`load_data` -- build :class:`DataStream`
+        2. :meth:`extract_features` -- optional feature engineering
+        3. :meth:`build_model` -- construct model, loss, optimizer
+        4. :meth:`train` -- run the training loop
+        5. :meth:`evaluate` -- compute validation metrics
+        6. :meth:`export` -- save model and predictions
+
+    Usage::
+
+        class ImagePipeline(BasePipeline):
+            def load_data(self, state): ...
+            def build_model(self, state): ...
+            def train(self, state): ...
+            def evaluate(self, state): ...
+            def export(self, state): ...
+
+        pipeline = ImagePipeline(config)
+        pipeline.add_hook(ProgressHook())
+        result = pipeline.run("train")
     """
 
+    def __init__(self, config: Config) -> None:
+        """Store config and initialize an empty hook list.
+
+        Args:
+            config: Pipeline configuration. Stored as ``self.config``
+                for subclasses to read.
+        """
+        self.config = config
+        self._hooks: list[BaseHook] = []
+
+    def add_hook(self, hook: BaseHook) -> None:
+        """Register a hook to receive pipeline lifecycle events.
+
+        Hooks fire in registration order. Adding the same hook twice
+        causes it to fire twice (no deduplication).
+
+        Args:
+            hook: Any object implementing :class:`BaseHook`.
+        """
+        self._hooks.append(hook)
+
+    # ── Template method ────────────────────────────────────────────
+    def run(self, mode: Literal["train", "infer"] = "train") -> PipelineState:
+        """Execute the pipeline.
+
+        In train mode, runs all six stages. In infer mode, skips
+        feature extraction, model building, training, and evaluation
+        -- only loads data and exports predictions.
+
+        Args:
+            mode: ``"train"`` or ``"infer"``.
+
+        Returns:
+            The :class:`PipelineState` with all stage outputs populated.
+        """
+        state = PipelineState(config=self.config, mode=mode)
+
+        # Stage 1: always needed (both train and infer need data)
+        self._run_stage("load_data", state, self.load_data)
+
+        if mode == "train":
+            # Stage 2: feature extraction (default: pass-through)
+            self._run_stage("extract_features", state, self.extract_features)
+            # Stage 3: model construction (DI entry point)
+            self._run_stage("build_model", state, self.build_model)
+            # Stage 4: training loop
+            self._run_stage("train", state, self.train)
+            # Stage 5: evaluation on validation set
+            self._run_stage("evaluate", state, self.evaluate)
+
+        # Stage 6: export (save model + write predictions)
+        self._run_stage("export", state, self.export)
+
+        return state
+
+    # ── Abstract stages ─────────────────────────────────────────────
     @abstractmethod
-    def run(self, config: Config) -> PipelineState:
-        """Execute the full training pipeline."""
-        ...
+    def load_data(self, state: PipelineState) -> None:
+        """Stage 1: Build a :class:`DataStream` and assign to ``state.data_stream``.
+
+        Called in both train and infer modes.
+        """
+
+    def extract_features(self, state: PipelineState) -> None:
+        """Stage 2: Optional feature engineering.
+
+        Default is pass-through (no-op). Override in traditional ML
+        pipelines (e.g., sklearn) that need explicit feature extraction.
+        In deep learning, the model extracts features internally.
+        """
 
     @abstractmethod
-    def infer(self, state: PipelineState) -> PipelineState:
-        """Execute the inference pipeline."""
-        ...
+    def build_model(self, state: PipelineState) -> None:
+        """Stage 3: Construct model, loss, and optimizer.
+
+        Assign ``state.model``, ``state.loss_fn``, and ``state.optimizer``.
+        """
+
+    @abstractmethod
+    def train(self, state: PipelineState) -> None:
+        """Stage 4: Run the training loop.
+
+        Iterate over ``state.data_stream``, forward--loss--backward--step,
+        populating ``state.history`` with loss/accuracy curves.
+        """
+
+    @abstractmethod
+    def evaluate(self, state: PipelineState) -> None:
+        """Stage 5: Evaluate the trained model on validation data.
+
+        Compute metrics (accuracy, F1, etc.) and write them to
+        ``state.metrics``.
+        """
+
+    @abstractmethod
+    def export(self, state: PipelineState) -> None:
+        """Stage 6: Save model checkpoints and write predictions.
+
+        Assign ``state.predictions`` with model outputs on test data.
+        """
+
+    # ── Hook dispatch ───────────────────────────────────────────────
+    def _run_stage(
+        self,
+        name: str,
+        state: PipelineState,
+        stage_fn: Callable[[PipelineState], None],
+    ) -> None:
+        """Execute one stage, wrapping it with hook notifications.
+
+        Args:
+            name: Stage label (e.g., ``"load_data"``).
+            state: Shared pipeline state.
+            stage_fn: The stage method to execute.
+        """
+        self._notify("on_stage_start", name, state)
+        try:
+            stage_fn(state)
+        except Exception:
+            # Stage failures are critical -- re-raise
+            raise
+        finally:
+            self._notify("on_stage_end", name, state)
+
+    def _notify(self, event: str, *args: object) -> None:
+        """Dispatch an event to all registered hooks.
+
+        Hook exceptions are caught and logged but do not interrupt
+        the pipeline -- hooks are non-critical by design.
+
+        Args:
+            event: Hook method name (e.g., ``"on_stage_start"``).
+            *args: Arguments forwarded to the hook method.
+        """
+        import logging
+
+        _logger = logging.getLogger(__name__)
+        for hook in self._hooks:
+            try:
+                getattr(hook, event)(*args)
+            except Exception:
+                _logger.exception(
+                    "Hook %s.%s raised an exception (ignored)",
+                    hook.__class__.__name__,
+                    event,
+                )

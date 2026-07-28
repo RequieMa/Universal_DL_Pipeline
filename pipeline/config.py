@@ -16,6 +16,12 @@ def _validate_positive(value: int | float, name: str) -> None:
         raise ValueError(f"{name} must be positive, got {value}")
 
 
+def _validate_non_negative(value: int | float, name: str) -> None:
+    """Raise ValueError if value is negative."""
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative, got {value}")
+
+
 def _validate_ratio(value: float, name: str) -> None:
     """Raise ValueError if not in (0, 1)."""
     if not (0.0 < value < 1.0):
@@ -87,7 +93,7 @@ class Config:
     def __post_init__(self) -> None:
         """Validate field values after dataclass construction."""
         _validate_positive(self.batch_size, "batch_size")
-        _validate_positive(self.num_epochs, "num_epochs")
+        _validate_non_negative(self.num_epochs, "num_epochs")
         _validate_positive(self.log_interval, "log_interval")
         _validate_positive(self.learning_rate, "learning_rate")
         _validate_ratio(self.train_ratio, "train_ratio")
