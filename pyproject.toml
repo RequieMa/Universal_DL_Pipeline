@@ -48,15 +48,7 @@ link-mode = "copy"                  # WSL2 cross-filesystem compatibility
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-exclude = [
-    "0_*.py", "1_*.py", "2_*.py", "3_*.py",
-    "auto.py", "classifier.py", "const.py",
-    "dataset_generation.py", "earlystop.py", "ensemble.py",
-    "model_generation.py", "optimizer.py", "Optimizer_Scheduler.py",
-    "pipeline_auto.py", "scheduler.py",
-    "Image_*.py", "Train_Process.py",
-    "config.yaml", "config_template.yaml",
-]
+include = ["pipeline/**/*.py", "tests/**/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]

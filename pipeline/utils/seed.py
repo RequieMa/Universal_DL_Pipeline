@@ -38,7 +38,7 @@ def set_seed(seed: int, deterministic: bool = False) -> None:
 
     # Try torch -- don't crash if not installed
     try:
-        import torch  # type: ignore[import-untyped]
+        import torch  # type: ignore[import-not-found]
 
         torch.manual_seed(seed)
         if deterministic and torch.cuda.is_available():

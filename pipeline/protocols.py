@@ -70,7 +70,7 @@ def _array_equal(a: object, b: object) -> bool:
     return bool(np.array_equal(a, b))
 
 
-@dataclass
+@dataclass(eq=False)
 class Batch:
     """One batch of data — inputs and targets.
 
@@ -84,6 +84,20 @@ class Batch:
 
     inputs: ArrayLike
     targets: ArrayLike
+
+    def __eq__(self, other: object) -> bool:
+        """Compare two Batches by value.
+
+        Uses :func:`numpy.array_equal` so that array-valued fields
+        compare correctly without raising ``ValueError`` on multi-
+        element arrays.
+        """
+        if not isinstance(other, Batch):
+            return NotImplemented
+        return (
+            _array_equal(self.inputs, other.inputs)
+            and _array_equal(self.targets, other.targets)
+        )
 
 
 # ── Abstract interfaces ──────────────────────────────────────────────────
