@@ -16,6 +16,8 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 
+from pipeline.evaluation import Metrics
+
 if TYPE_CHECKING:
     from pipeline.config import Config
     from pipeline.hooks import BaseHook
@@ -37,12 +39,13 @@ class PipelineState:
         config: The pipeline configuration (read-only after construction).
         mode: ``"train"`` runs all 6 stages; ``"infer"`` skips training.
         data_stream: Set by Stage 1 (load_data).
+        val_data_stream: Validation data stream, set by Stage 1.
         features: Set by Stage 2 (extract_features). None if pass-through.
         model: Set by Stage 3 (build_model).
         loss_fn: Set by Stage 3.
         optimizer: Set by Stage 3.
         history: Set by Stage 4 (train). A dict with loss/accuracy curves.
-        metrics: Set by Stage 5 (evaluate). e.g., ``{"accuracy": 0.92}``.
+        metrics: Set by Stage 5 (evaluate). A :class:`Metrics` instance.
         predictions: Set by Stage 6 (export). Model predictions on test data.
         current_epoch: Tracked by the training loop; hooks can read it.
         should_stop: Early-stopping hooks set this to True.
@@ -53,12 +56,13 @@ class PipelineState:
 
     # Stage outputs (None until the stage runs)
     data_stream: DataStream | None = None
+    val_data_stream: DataStream | None = None
     features: ArrayLike | None = None
     model: ModelProtocol | None = None
     loss_fn: LossProtocol | None = None
     optimizer: OptimizerProtocol | None = None
     history: dict[str, Any] | None = None
-    metrics: dict[str, float] = field(default_factory=dict)
+    metrics: Metrics = field(default_factory=Metrics)
     predictions: ArrayLike | None = None
 
     # Control signals
@@ -114,6 +118,18 @@ class BasePipeline(ABC):
         """
         self.config = config
         self._hooks: list[BaseHook] = []
+
+    @property
+    def hooks(self) -> list[BaseHook]:
+        """Registered hooks (read-only).
+
+        Use :meth:`add_hook` to register. The returned list is the live
+        internal list -- modifications to it affect the pipeline.
+
+        TrainLoop reads this property to borrow hooks for training-time
+        events (epoch start/end, batch end).
+        """
+        return self._hooks
 
     def add_hook(self, hook: BaseHook) -> None:
         """Register a hook to receive pipeline lifecycle events.
@@ -183,13 +199,29 @@ class BasePipeline(ABC):
         Assign ``state.model``, ``state.loss_fn``, and ``state.optimizer``.
         """
 
-    @abstractmethod
     def train(self, state: PipelineState) -> None:
         """Stage 4: Run the training loop.
 
-        Iterate over ``state.data_stream``, forward--loss--backward--step,
+        Default implementation delegates to :class:`TrainLoop`.
+        Subclasses may override for non-standard training (GAN, meta-learning).
+
+        Iterate over ``state.data_stream``, forward -- loss -- backward -- step,
         populating ``state.history`` with loss/accuracy curves.
         """
+        # WHY: Lazy import avoids circular imports -- TrainLoop imports
+        # PipelineState from pipeline.pipeline, but at this point both
+        # modules are already loaded.
+        from pipeline.training.train_loop import TrainLoop  # type: ignore[import-untyped]
+
+        loop = TrainLoop(
+            model=state.model,
+            data_stream=state.data_stream,
+            optimizer=state.optimizer,
+            loss_fn=state.loss_fn,
+            num_epochs=state.config.num_epochs,
+            hooks=self._hooks,
+        )
+        loop.run(state)
 
     @abstractmethod
     def evaluate(self, state: PipelineState) -> None:

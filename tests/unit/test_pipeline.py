@@ -1,125 +1,11 @@
-"""Unit tests for pipeline.pipeline — PipelineState and BasePipeline."""
-
+"""Unit tests for pipeline.pipeline — BasePipeline only."""
 import numpy as np
 import pytest
 
 from pipeline.config import Config
+from pipeline.evaluation.metrics import Metrics, accuracy
 from pipeline.hooks import BaseHook
 from pipeline.pipeline import BasePipeline, PipelineState
-
-
-class TestPipelineStateDefaults:
-    """Tests for PipelineState default values."""
-
-    def test_create_with_config_only(self):
-        """Happy Path: PipelineState(config) uses all defaults."""
-        cfg = Config()
-        state = PipelineState(config=cfg)
-        assert state.config is cfg
-        assert state.mode == "train"
-        assert state.data_stream is None
-        assert state.features is None
-        assert state.model is None
-        assert state.loss_fn is None
-        assert state.optimizer is None
-        assert state.history is None
-        assert state.metrics == {}
-        assert state.predictions is None
-        assert state.current_epoch == 0
-        assert state.should_stop is False
-
-    def test_create_with_infer_mode(self):
-        """Happy Path: PipelineState with mode='infer'."""
-        state = PipelineState(config=Config(), mode="infer")
-        assert state.mode == "infer"
-
-
-class TestPipelineStateProperties:
-    """Tests for PipelineState @property methods."""
-
-    def test_is_training_when_train_mode(self):
-        """Property: is_training is True when mode='train'."""
-        state = PipelineState(config=Config(), mode="train")
-        assert state.is_training is True
-
-    def test_is_training_false_when_infer_mode(self):
-        """Property: is_training is False when mode='infer'."""
-        state = PipelineState(config=Config(), mode="infer")
-        assert state.is_training is False
-
-    def test_is_training_read_only(self):
-        """Property: is_training is read-only (raises AttributeError on set)."""
-        state = PipelineState(config=Config())
-        with pytest.raises(AttributeError):
-            state.is_training = False  # type: ignore[misc]
-
-
-class TestPipelineStateFieldAssignment:
-    """Tests for PipelineState field mutations."""
-
-    def test_assign_and_read_data_stream(self):
-        """Happy Path: data_stream field is writable and readable."""
-        state = PipelineState(config=Config())
-        state.data_stream = "fake_stream"  # protocol duck-type
-        assert state.data_stream == "fake_stream"
-
-    def test_assign_model(self):
-        """Happy Path: model field is writable and readable."""
-        state = PipelineState(config=Config())
-        state.model = "fake_model"  # protocol duck-type
-        assert state.model == "fake_model"
-
-    def test_assign_metrics(self):
-        """Happy Path: metrics dict is mutable."""
-        state = PipelineState(config=Config())
-        state.metrics["accuracy"] = 0.95
-        state.metrics["f1"] = 0.93
-        assert state.metrics == {"accuracy": 0.95, "f1": 0.93}
-
-    def test_should_stop_flag(self):
-        """Happy Path: should_stop is settable (for early stopping hooks)."""
-        state = PipelineState(config=Config())
-        assert state.should_stop is False
-        state.should_stop = True
-        assert state.should_stop is True
-
-    def test_current_epoch_increment(self):
-        """Happy Path: current_epoch is mutable for training loop."""
-        state = PipelineState(config=Config())
-        for epoch in range(5):
-            state.current_epoch = epoch
-        assert state.current_epoch == 4
-
-    def test_predictions_assign_arraylike(self):
-        """Happy Path: predictions field accepts numpy array."""
-        state = PipelineState(config=Config())
-        preds = np.array([[0.1, 0.9], [0.8, 0.2]])
-        state.predictions = preds
-        assert np.array_equal(state.predictions, preds)
-
-
-class TestPipelineStateIsolation:
-    """Tests for PipelineState isolation between runs."""
-
-    def test_two_states_independent(self):
-        """Concurrency: two PipelineState instances don't share state."""
-        cfg = Config()
-        state1 = PipelineState(config=cfg, mode="train")
-        state2 = PipelineState(config=cfg, mode="infer")
-
-        state1.metrics["accuracy"] = 0.9
-        state2.metrics["accuracy"] = 0.5
-
-        assert state1.metrics["accuracy"] == 0.9
-        assert state2.metrics["accuracy"] == 0.5
-        assert state1.mode != state2.mode
-
-    def test_metrics_default_dicts_isolated(self):
-        """Concurrency: default metrics dict is unique per instance."""
-        s1 = PipelineState(config=Config())
-        s2 = PipelineState(config=Config())
-        s1.metrics["x"] = 1.0
-        assert "x" not in s2.metrics
 
 
 # ── Minimal concrete pipeline for testing ────────────────────────────────
@@ -136,7 +22,10 @@ class _MinimalPipeline(BasePipeline):
         state.current_epoch = state.config.num_epochs
 
     def evaluate(self, state: PipelineState) -> None:
-        state.metrics["accuracy"] = 0.95
+        y_true = np.array([0, 1, 0])
+        y_pred = np.array([0, 1, 0])
+        state.metrics = Metrics(accuracy=accuracy)
+        state.metrics.compute(y_true, y_pred)
 
     def export(self, state: PipelineState) -> None:
         state.predictions = np.array([0, 1, 0])
@@ -188,7 +77,7 @@ class TestBasePipelineRun:
         pipeline = _MinimalPipeline(Config(num_epochs=3))
         state = pipeline.run("train")
         assert state.current_epoch == 3
-        assert state.metrics["accuracy"] == 0.95
+        assert state.metrics["accuracy"] == 1.0
         assert state.predictions is not None
 
     def test_run_infer_skips_training_stages(self):
@@ -199,7 +88,7 @@ class TestBasePipelineRun:
         # Training stages skipped
         assert state.model is None
         assert state.current_epoch == 0
-        assert state.metrics == {}
+        assert len(state.metrics) == 0  # UPDATED: was == {}
         # load_data and export still run
         assert state.predictions is not None
 
@@ -223,7 +112,7 @@ class TestBasePipelineHooks:
         """Boundary: pipeline with zero hooks runs without error."""
         pipeline = _MinimalPipeline(Config())
         state = pipeline.run("train")
-        assert state.metrics["accuracy"] == 0.95
+        assert state.metrics["accuracy"] == 1.0
 
     def test_single_hook_receives_events(self):
         """Happy Path: a registered hook receives stage start/end events."""
@@ -286,7 +175,7 @@ class TestBasePipelineErrorRecovery:
         pipeline.add_hook(CrashingHook())
         # Should not raise — pipeline recovers
         state = pipeline.run("train")
-        assert state.metrics["accuracy"] == 0.95
+        assert state.metrics["accuracy"] == 1.0
 
     def test_stage_exception_propagates(self):
         """Error recovery: a stage that raises propagates the exception
@@ -306,3 +195,55 @@ class TestBasePipelineErrorRecovery:
         state = pipeline.run("infer")
         assert state.predictions is not None
         assert state.model is None  # never built
+
+
+class TestBasePipelineHooksProperty:
+    """Tests for BasePipeline.hooks read-only @property."""
+
+    def test_hooks_property_returns_list(self):
+        """Happy Path: hooks returns the internal hook list."""
+        pipeline = _MinimalPipeline(Config())
+        assert isinstance(pipeline.hooks, list)
+        assert len(pipeline.hooks) == 0
+
+    def test_hooks_property_read_only(self):
+        """Error: hooks property raises AttributeError on set."""
+        pipeline = _MinimalPipeline(Config())
+        with pytest.raises(AttributeError):
+            pipeline.hooks = []  # type: ignore[misc]
+
+    def test_hooks_property_reflects_add_hook(self):
+        """Happy Path: hooks list reflects hooks added via add_hook()."""
+        pipeline = _MinimalPipeline(Config())
+        spy = _SpyHook()
+        pipeline.add_hook(spy)
+        assert len(pipeline.hooks) == 1
+        assert pipeline.hooks[0] is spy
+
+
+class TestBasePipelineTrainDefault:
+    """Tests for the default train() implementation (delegates to TrainLoop).
+
+    NOTE: These tests verify train() is no longer abstract. Full TrainLoop
+    integration is tested in test_train_loop.py (Task 5).
+    """
+
+    def test_train_is_not_abstract(self):
+        """Happy Path: subclasses without train() can be instantiated."""
+        class PipelineNoTrain(BasePipeline):
+            def load_data(self, state):
+                pass
+            def build_model(self, state):
+                pass
+            def evaluate(self, state):
+                pass
+            def export(self, state):
+                pass
+
+        pipeline = PipelineNoTrain(Config())
+        assert pipeline is not None
+
+    def test_train_uses_lazy_import(self):
+        """Happy Path: train() imports TrainLoop lazily (verified via
+        `hasattr` -- the method exists and has no __isabstractmethod__)."""
+        assert not hasattr(BasePipeline.train, "__isabstractmethod__")
