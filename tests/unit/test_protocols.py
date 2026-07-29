@@ -1,6 +1,4 @@
 """Unit tests for pipeline.protocols — data structures and abstract interfaces."""
-from collections.abc import Iterator
-
 import numpy as np
 import pytest
 
@@ -13,6 +11,15 @@ from pipeline.protocols import (
     ModelProtocol,
     OptimizerProtocol,
     Parameter,
+)
+
+# Shared test doubles (defined in conftest.py so all test files can use them)
+from tests.unit.conftest import (
+    FakeDataStream,
+    FakeLoss,
+    FakeModel,
+    FakeModelWithParams,
+    FakeOptimizer,
 )
 
 
@@ -145,63 +152,6 @@ class TestLoss:
         """Boundary: zero loss value."""
         loss = Loss(value=0.0)
         assert float(loss) == 0.0
-
-
-# ── Fake implementations for testing ABCs ────────────────────────────────
-class FakeDataStream(DataStream):
-    """Minimal DataStream implementation for testing."""
-
-    def __init__(self, batches: list[Batch]):
-        self._batches = batches
-
-    def __iter__(self) -> Iterator[Batch]:
-        yield from self._batches
-
-    def __len__(self) -> int:
-        return len(self._batches)
-
-
-class FakeModel(ModelProtocol):
-    """Minimal ModelProtocol implementation for testing."""
-
-    def __init__(self):
-        self._params = [Parameter(data=np.array([1.0]), name="w")]
-        self._mode = "train"
-
-    def forward(self, inputs: ArrayLike) -> ArrayLike:
-        return np.asarray(inputs) * 2.0
-
-    def parameters(self) -> Iterator[Parameter]:
-        return iter(self._params)
-
-    def train_mode(self) -> None:
-        self._mode = "train"
-
-    def eval_mode(self) -> None:
-        self._mode = "eval"
-
-
-class FakeLoss(LossProtocol):
-    """Minimal LossProtocol implementation for testing."""
-
-    def forward(self, predictions: ArrayLike, targets: ArrayLike) -> Loss:
-        preds = np.asarray(predictions)
-        targs = np.asarray(targets)
-        return float(np.mean((preds - targs) ** 2))
-
-
-class FakeOptimizer(OptimizerProtocol):
-    """Minimal OptimizerProtocol implementation for testing."""
-
-    def __init__(self):
-        self.step_count = 0
-        self.zero_count = 0
-
-    def step(self) -> None:
-        self.step_count += 1
-
-    def zero_grad(self) -> None:
-        self.zero_count += 1
 
 
 # ── DataStream tests ─────────────────────────────────────────────────────
