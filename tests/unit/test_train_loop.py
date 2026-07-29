@@ -11,10 +11,8 @@ from pipeline.pipeline import PipelineState
 from pipeline.protocols import Batch, Loss
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
 
     from pipeline.config import Config
-    from pipeline.protocols import ArrayLike
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -54,7 +52,6 @@ class TestTrainLoopConstruction:
     def test_constructs_with_all_args(self):
         """Happy Path: all required args produce a valid TrainLoop."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         stream = FakeDataStream([Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]]))])
@@ -71,7 +68,6 @@ class TestTrainLoopConstruction:
     def test_constructs_without_hooks(self):
         """Boundary: hooks list is empty by default."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         stream = FakeDataStream([Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]]))])
@@ -87,7 +83,6 @@ class TestTrainLoopConstruction:
     def test_constructs_with_single_batch(self):
         """Boundary: a single batch is valid."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         stream = FakeDataStream([Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]]))])
@@ -103,7 +98,6 @@ class TestTrainLoopConstruction:
     def test_constructs_with_zero_epochs(self):
         """Boundary: zero epochs is valid (no training iterations)."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         stream = FakeDataStream([Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]]))])
@@ -128,7 +122,6 @@ class TestTrainLoopRunHistory:
     def test_history_contains_loss(self):
         """Happy Path: run() writes state.history['loss'] as list of floats."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -153,7 +146,6 @@ class TestTrainLoopRunHistory:
     def test_history_length_equals_epochs_times_batches(self):
         """Happy Path: loss history has one entry per batch per epoch."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -176,7 +168,6 @@ class TestTrainLoopRunHistory:
     def test_zero_epochs_produces_empty_history(self):
         """Boundary: zero epochs results in empty loss history."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -197,7 +188,6 @@ class TestTrainLoopRunHistory:
     def test_larger_loss_for_mismatched_prediction(self):
         """Happy Path: worse predictions produce larger loss values."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -228,14 +218,13 @@ class TestTrainLoopStateUpdates:
     def test_current_epoch_before_training(self):
         """Boundary: current_epoch is 0 before run() is called."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
         stream = FakeDataStream([
             Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
         ])
-        loop = TrainLoop(
+        _ = TrainLoop(
             model=FakeModel(),
             data_stream=stream,
             optimizer=FakeOptimizer(),
@@ -248,7 +237,6 @@ class TestTrainLoopStateUpdates:
     def test_current_epoch_after_run(self):
         """Happy Path: current_epoch equals num_epochs after run()."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -269,7 +257,6 @@ class TestTrainLoopStateUpdates:
     def test_history_is_dict_with_loss_key(self):
         """Happy Path: history is a dict with at least 'loss' key."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -316,7 +303,6 @@ class TestTrainLoopHookDispatch:
     def test_on_epoch_start_fires_per_epoch(self):
         """Happy Path: on_epoch_start fires once per epoch."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -339,7 +325,6 @@ class TestTrainLoopHookDispatch:
     def test_on_epoch_end_fires_per_epoch(self):
         """Happy Path: on_epoch_end fires once per epoch."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -362,7 +347,6 @@ class TestTrainLoopHookDispatch:
     def test_on_batch_end_fires_per_batch(self):
         """Happy Path: on_batch_end fires for each batch in each epoch."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -386,7 +370,6 @@ class TestTrainLoopHookDispatch:
     def test_batch_end_receives_loss_value(self):
         """Happy Path: on_batch_end receives the actual loss as a float."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -411,7 +394,6 @@ class TestTrainLoopHookDispatch:
     def test_multiple_hooks_all_fire(self):
         """Happy Path: two hooks both receive all events."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -455,7 +437,6 @@ class TestTrainLoopEarlyStopping:
     def test_stops_after_first_epoch(self):
         """Happy Path: should_stop=True after epoch 0 stops after 1 epoch."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -476,7 +457,6 @@ class TestTrainLoopEarlyStopping:
     def test_stops_after_third_epoch(self):
         """Happy Path: should_stop after epoch 2 stops after 3 epochs."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -497,7 +477,6 @@ class TestTrainLoopEarlyStopping:
     def test_does_not_exceed_num_epochs(self):
         """Boundary: even without early stop, epochs never exceed num_epochs."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -519,7 +498,6 @@ class TestTrainLoopEarlyStopping:
     def test_hook_exception_does_not_kill_loop(self):
         """Error recovery: a crashing hook is logged but loop continues."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -555,7 +533,6 @@ class TestTrainLoopGradientUpdate:
     def test_optimizer_step_called(self):
         """Happy Path: optimizer.step() is called per batch."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModelWithParams, FakeOptimizer
 
         state = _make_state()
@@ -593,13 +570,11 @@ class TestTrainLoopNoParams:
     def test_runs_with_empty_parameters(self):
         """Boundary: model returning empty parameters still runs."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import (
             FakeDataStream,
             FakeLoss,
             ModelProtocol,
             OptimizerProtocol,
-            Parameter,
         )
 
         class NoParamModel(ModelProtocol):
@@ -650,7 +625,6 @@ class TestTrainLoopEmptyStream:
     def test_empty_stream_produces_no_loss_entries(self):
         """Boundary: empty data stream results in empty history per epoch."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
@@ -678,7 +652,6 @@ class TestTrainLoopWithLossObject:
     def test_accepts_loss_object(self):
         """Happy Path: LossProtocol that returns Loss object works."""
         from pipeline.training.train_loop import TrainLoop
-
         from tests.unit.conftest import (
             FakeDataStream,
             FakeModel,

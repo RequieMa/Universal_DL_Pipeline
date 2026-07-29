@@ -135,7 +135,7 @@ def confusion_matrix(
     if num_classes is None:
         num_classes = int(max(y_true.max(), y_pred.max())) + 1
     cm = np.zeros((num_classes, num_classes), dtype=np.int64)
-    for t, p in zip(y_true, y_pred):
+    for t, p in zip(y_true, y_pred, strict=False):
         cm[t, p] += 1
     return cm
 

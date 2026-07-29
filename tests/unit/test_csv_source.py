@@ -1,9 +1,7 @@
 """Unit tests for pipeline.data.csv_source -- CsvDataSource."""
 from __future__ import annotations
 
-import math
 import tempfile
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -82,7 +80,7 @@ class TestCsvDataSourceShuffle:
         s2 = CsvDataSource(tiny_csv, batch_size=2, seed=42)
         batches1 = list(s1)
         batches2 = list(s2)
-        for b1, b2 in zip(batches1, batches2):
+        for b1, b2 in zip(batches1, batches2, strict=False):
             np.testing.assert_array_equal(b1.inputs, b2.inputs)
 
     def test_different_seed_different_order(self, tiny_csv):

@@ -3,12 +3,9 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-import numpy as np
-
 from pipeline.config import Config
 from pipeline.hooks.progress import ProgressHook
 from pipeline.pipeline import PipelineState
-from pipeline.protocols import Batch
 
 
 class TestProgressHook:
@@ -21,7 +18,6 @@ class TestProgressHook:
         state.data_stream = [1, 2, 3]  # len=3 for total
 
         with patch("tqdm.tqdm") as mock_tqdm:
-            mock_pbar = mock_tqdm.return_value
             hook.on_epoch_start(0, state)
             mock_tqdm.assert_called_once_with(total=3, desc="Epoch 1")
 

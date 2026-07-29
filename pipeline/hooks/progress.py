@@ -73,9 +73,4 @@ class ProgressHook(BaseHook):
             self._pbar.close()
             self._pbar = None
 
-        avg_loss = (
-            sum(self._losses) / len(self._losses)
-            if self._losses
-            else 0.0
-        )
         self._losses.clear()
