@@ -56,7 +56,6 @@ def main(argv: list[str] | None = None) -> None:
             train_stream, val_stream = train_test_split(
                 full_stream,
                 train_ratio=config.train_ratio,
-                batch_size=config.batch_size,
             )
             state.data_stream = train_stream
             state.val_data_stream = val_stream

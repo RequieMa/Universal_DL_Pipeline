@@ -13,6 +13,31 @@ import numpy as np
 from pipeline.protocols import Batch, DataStream
 
 
+def _collect_data(source: DataStream) -> tuple[np.ndarray, np.ndarray]:
+    """Collect all data from a DataStream into contiguous arrays.
+
+    Iterates over ``source``, converts each batch to arrays,
+    and concatenates them.
+
+    Args:
+        source: A :class:`DataStream` to read from.
+
+    Returns:
+        ``(inputs, targets)`` where each is a :class:`np.ndarray`.
+        Both are empty arrays when the stream is empty.
+    """
+    all_inputs: list[np.ndarray] = []
+    all_targets: list[np.ndarray] = []
+    for batch in source:
+        all_inputs.append(np.asarray(batch.inputs))
+        all_targets.append(np.asarray(batch.targets))
+
+    if not all_inputs:
+        return np.array([]), np.array([])
+
+    return np.concatenate(all_inputs, axis=0), np.concatenate(all_targets)
+
+
 def train_test_split(
     source: DataStream,
     train_ratio: float = 0.8,
@@ -37,21 +62,12 @@ def train_test_split(
     Returns:
         ``(train_stream, val_stream)`` tuple of :class:`DataStream`.
     """
-    # Collect all data from the source stream into memory.
-    all_inputs: list[np.ndarray] = []
-    all_targets: list[np.ndarray] = []
-    for batch in source:
-        all_inputs.append(np.asarray(batch.inputs))
-        all_targets.append(np.asarray(batch.targets))
-
-    if not all_inputs:
+    inputs, targets = _collect_data(source)
+    if len(inputs) == 0:
         return (
             _InMemoryDataStream(np.array([]), np.array([])),
             _InMemoryDataStream(np.array([]), np.array([])),
         )
-
-    inputs = np.concatenate(all_inputs, axis=0)
-    targets = np.concatenate(all_targets)
     n_samples = len(inputs)
 
     # Shuffle indices

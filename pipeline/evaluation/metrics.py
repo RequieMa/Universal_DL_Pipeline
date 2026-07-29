@@ -28,7 +28,10 @@ def accuracy(y_true: ArrayLike, y_pred: ArrayLike) -> float:
 
 
 def precision(
-    y_true: ArrayLike, y_pred: ArrayLike, average: str = "binary"
+    y_true: ArrayLike,
+    y_pred: ArrayLike,
+    average: str = "binary",
+    pos_label: int | None = None,
 ) -> float:
     """Precision: TP / (TP + FP).
 
@@ -36,6 +39,9 @@ def precision(
         y_true: Ground-truth labels.
         y_pred: Predicted labels.
         average: ``"binary"`` or ``"macro"``. Macro averages per-class precision.
+        pos_label: Positive class label for binary mode. When ``None`` (default)
+            and ``average="binary"``, auto-detects from the unique sorted labels
+            using ``classes[-1]``.
 
     Returns:
         Precision in ``[0.0, 1.0]``.
@@ -44,8 +50,10 @@ def precision(
     y_pred = np.asarray(y_pred)
     classes = np.unique(np.concatenate([y_true, y_pred]))
     if average == "binary" and len(classes) <= 2:
-        tp = np.sum((y_pred == 1) & (y_true == 1))
-        fp = np.sum((y_pred == 1) & (y_true == 0))
+        if pos_label is None:
+            pos_label = classes[-1]
+        tp = np.sum((y_pred == pos_label) & (y_true == pos_label))
+        fp = np.sum((y_pred == pos_label) & (y_true != pos_label))
         return float(tp / (tp + fp)) if (tp + fp) > 0 else 0.0
     # macro
     scores: list[float] = []
@@ -57,7 +65,10 @@ def precision(
 
 
 def recall(
-    y_true: ArrayLike, y_pred: ArrayLike, average: str = "binary"
+    y_true: ArrayLike,
+    y_pred: ArrayLike,
+    average: str = "binary",
+    pos_label: int | None = None,
 ) -> float:
     """Recall: TP / (TP + FN).
 
@@ -65,6 +76,9 @@ def recall(
         y_true: Ground-truth labels.
         y_pred: Predicted labels.
         average: ``"binary"`` or ``"macro"``. Macro averages per-class recall.
+        pos_label: Positive class label for binary mode. When ``None`` (default)
+            and ``average="binary"``, auto-detects from the unique sorted labels
+            using ``classes[-1]``.
 
     Returns:
         Recall in ``[0.0, 1.0]``.
@@ -73,8 +87,10 @@ def recall(
     y_pred = np.asarray(y_pred)
     classes = np.unique(np.concatenate([y_true, y_pred]))
     if average == "binary" and len(classes) <= 2:
-        tp = np.sum((y_pred == 1) & (y_true == 1))
-        fn = np.sum((y_pred == 0) & (y_true == 1))
+        if pos_label is None:
+            pos_label = classes[-1]
+        tp = np.sum((y_pred == pos_label) & (y_true == pos_label))
+        fn = np.sum((y_pred != pos_label) & (y_true == pos_label))
         return float(tp / (tp + fn)) if (tp + fn) > 0 else 0.0
     scores: list[float] = []
     for c in classes:
