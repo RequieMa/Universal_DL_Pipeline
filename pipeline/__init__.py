@@ -15,6 +15,10 @@ Subpackages:
     - :mod:`pipeline.registry` — dependency injection registry
     - :mod:`pipeline.hooks` — hook system for cross-cutting concerns
     - :mod:`pipeline.config` — configuration dataclass
+    - :mod:`pipeline.data` — data sources (CsvDataSource) and split utilities
+    - :mod:`pipeline.training` — train loop and future optimizer/loss implementations
+    - :mod:`pipeline.evaluation` — metrics container and pure metric functions
+    - :mod:`pipeline.export` — CSV and checkpoint export utilities
     - :mod:`pipeline.utils` — device, seed utilities
 """
 

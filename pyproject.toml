@@ -28,6 +28,13 @@ dependencies = [
     "tqdm>=4.70.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/RequieMa/Universal_DL_Pipeline"
+Repository = "https://github.com/RequieMa/Universal_DL_Pipeline"
+
+[project.scripts]
+dl-pipeline = "pipeline.__main__:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
