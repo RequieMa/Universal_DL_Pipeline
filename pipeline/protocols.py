@@ -15,7 +15,7 @@ Protocols defined here:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from dataclasses import dataclass
 from typing import Any
 
@@ -98,6 +98,41 @@ class Batch:
             _array_equal(self.inputs, other.inputs)
             and _array_equal(self.targets, other.targets)
         )
+
+
+@dataclass
+class Loss:
+    """Loss computation result.
+
+    Wraps the scalar loss value and an optional backward hook.
+    ``float(loss)`` extracts the scalar; ``loss.backward()`` computes
+    gradients into :attr:`Parameter.grad`. The backward pass is a no-op
+    for non-gradient models (sklearn, Phase 1 fake models).
+
+    Usage::
+
+        loss = loss_fn(predictions, targets)
+        print(f"{loss:.4f}")         # __float__ → scalar
+        loss.backward()              # compute gradients (no-op for non-gradient models)
+        optimizer.step()             # apply gradients
+    """
+
+    value: float
+    _backward_fn: Callable[[], None] | None = None
+
+    def backward(self) -> None:
+        """Compute gradients for all trainable parameters.
+
+        No-op for non-gradient models. For numpy/torch adapters,
+        the concrete implementation provides the framework-specific
+        gradient computation via ``_backward_fn``.
+        """
+        if self._backward_fn is not None:
+            self._backward_fn()
+
+    def __float__(self) -> float:
+        """Extract the scalar loss value."""
+        return self.value
 
 
 # ── Abstract interfaces ──────────────────────────────────────────────────
@@ -199,7 +234,7 @@ class LossProtocol(ABC):
     """
 
     @abstractmethod
-    def forward(self, predictions: ArrayLike, targets: ArrayLike) -> float:
+    def forward(self, predictions: ArrayLike, targets: ArrayLike) -> Loss:
         """Compute the loss.
 
         Args:
@@ -207,11 +242,11 @@ class LossProtocol(ABC):
             targets: Ground truth of shape ``(batch_size, *dims)``.
 
         Returns:
-            Scalar loss value.
+            Loss value object.
         """
         ...
 
-    def __call__(self, predictions: ArrayLike, targets: ArrayLike) -> float:
+    def __call__(self, predictions: ArrayLike, targets: ArrayLike) -> Loss:
         """Delegate to :meth:`forward`. The standard calling convention."""
         return self.forward(predictions, targets)
 

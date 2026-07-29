@@ -8,6 +8,7 @@ from pipeline.protocols import (
     ArrayLike,
     Batch,
     DataStream,
+    Loss,
     LossProtocol,
     ModelProtocol,
     OptimizerProtocol,
@@ -103,6 +104,49 @@ class TestArrayLike:
         assert _data is not None
 
 
+class TestLoss:
+    """Tests for the Loss value object."""
+
+    def test_float_conversion(self):
+        """Happy Path: float(loss) extracts the scalar value."""
+        loss = Loss(value=0.5)
+        assert float(loss) == 0.5
+
+    def test_backward_noop_when_no_fn(self):
+        """Happy Path: backward() is a no-op when _backward_fn is None."""
+        loss = Loss(value=0.5)
+        loss.backward()  # should not raise
+
+    def test_backward_calls_fn(self):
+        """Happy Path: backward() calls the stored function."""
+        called = []
+        loss = Loss(value=0.5, _backward_fn=lambda: called.append(1))
+        loss.backward()
+        assert called == [1]
+
+    def test_backward_fn_receives_no_args(self):
+        """Boundary: backward_fn receives zero arguments."""
+        captured = None
+
+        def _backward():
+            nonlocal captured
+            captured = "ran"
+
+        loss = Loss(value=1.0, _backward_fn=_backward)
+        loss.backward()
+        assert captured == "ran"
+
+    def test_negative_loss_value(self):
+        """Boundary: negative loss values are preserved."""
+        loss = Loss(value=-3.2)
+        assert float(loss) == -3.2
+
+    def test_zero_loss_value(self):
+        """Boundary: zero loss value."""
+        loss = Loss(value=0.0)
+        assert float(loss) == 0.0
+
+
 # ── Fake implementations for testing ABCs ────────────────────────────────
 class FakeDataStream(DataStream):
     """Minimal DataStream implementation for testing."""
@@ -140,7 +184,7 @@ class FakeModel(ModelProtocol):
 class FakeLoss(LossProtocol):
     """Minimal LossProtocol implementation for testing."""
 
-    def forward(self, predictions: ArrayLike, targets: ArrayLike) -> float:
+    def forward(self, predictions: ArrayLike, targets: ArrayLike) -> Loss:
         preds = np.asarray(predictions)
         targs = np.asarray(targets)
         return float(np.mean((preds - targs) ** 2))
