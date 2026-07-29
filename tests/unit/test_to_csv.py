@@ -5,7 +5,6 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 from pipeline.export.to_csv import to_csv
 
@@ -90,8 +89,8 @@ class TestToCsv:
 
     def test_creates_parent_directory(self):
         """Happy Path: parent directories are created if needed."""
-        import tempfile
         import os
+        import tempfile
 
         tmpdir = tempfile.mkdtemp()
         path = os.path.join(tmpdir, "subdir", "output.csv")

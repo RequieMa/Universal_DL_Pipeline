@@ -27,7 +27,6 @@ from pipeline.protocols import (
     ArrayLike,
     Batch,
     DataStream,
-    Loss,
     LossProtocol,
     ModelProtocol,
     OptimizerProtocol,

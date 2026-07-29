@@ -18,7 +18,6 @@ from tests.unit.conftest import (
     FakeDataStream,
     FakeLoss,
     FakeModel,
-    FakeModelWithParams,
     FakeOptimizer,
 )
 

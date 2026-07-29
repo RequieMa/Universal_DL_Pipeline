@@ -4,8 +4,6 @@ from __future__ import annotations
 import io
 import sys
 
-import pytest
-
 
 class TestMainModule:
     """Tests for python -m pipeline."""
