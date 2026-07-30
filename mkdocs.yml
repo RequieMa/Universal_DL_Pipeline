@@ -41,10 +41,17 @@ nav:
   - API Reference:
       - Protocols: api/protocols.md
       - Pipeline: api/pipeline.md
+      - Config: api/config.md
       - Registry: api/registry.md
       - Hooks: api/hooks.md
-      - Config: api/config.md
+      - Data: api/data.md
+      - Training: api/training.md
+      - Evaluation: api/evaluation.md
+      - Export: api/export.md
       - Utils: api/utils.md
+  - Design:
+      - Architecture Spec: superpowers/specs/2026-07-28-pipeline-architecture-design.md
+      - Phase 1 Framework: superpowers/specs/2026-07-29-phase-1-framework-design.md
 
 markdown_extensions:
   - pymdownx.highlight:
