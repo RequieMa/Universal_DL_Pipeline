@@ -1,4 +1,5 @@
 """Unit tests for pipeline.data.utils — collect_arrays."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -28,18 +29,18 @@ class TestCollectArrays:
     def test_collects_all_batches(self):
         """Happy Path: drains entire stream into (X, y)."""
         stream = FakeStream()
-        X, y = collect_arrays(stream)
-        assert X.shape == (3, 2)
+        x, y = collect_arrays(stream)
+        assert x.shape == (3, 2)
         assert y.shape == (3,)
-        np.testing.assert_array_equal(X, np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]))
+        np.testing.assert_array_equal(x, np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]))
         np.testing.assert_array_equal(y, np.array([0, 1, 0]))
 
     def test_single_batch(self):
         """Boundary: stream with exactly one batch."""
         stream = FakeStream()
         stream._batches = [Batch(inputs=np.array([[1.0]]), targets=np.array([0]))]
-        X, y = collect_arrays(stream)
-        assert X.shape == (1, 1)
+        x, y = collect_arrays(stream)
+        assert x.shape == (1, 1)
         assert y.shape == (1,)
 
     def test_empty_stream_raises(self):

@@ -16,9 +16,10 @@ Subpackages:
     - :mod:`pipeline.hooks` — hook system for cross-cutting concerns
     - :mod:`pipeline.config` — configuration dataclass
     - :mod:`pipeline.data` — data sources (CsvDataSource) and split utilities
-    - :mod:`pipeline.training` — train loop and future optimizer/loss implementations
+    - :mod:`pipeline.training` — train loop, optimizers (SGD, Adam), losses (MSE, CrossEntropy)
     - :mod:`pipeline.evaluation` — metrics container and pure metric functions
     - :mod:`pipeline.export` — CSV and checkpoint export utilities
+    - :mod:`pipeline.adapters` — framework adapters (SklearnModel, NumpyModel, NumpyOptimizer)
     - :mod:`pipeline.utils` — device, seed utilities
 """
 
@@ -26,4 +27,4 @@ from pipeline.config import Config
 from pipeline.pipeline import BasePipeline, PipelineState
 
 __all__ = ["BasePipeline", "PipelineState", "Config"]
-__version__ = "0.1.0"
+__version__ = "0.2.0"
