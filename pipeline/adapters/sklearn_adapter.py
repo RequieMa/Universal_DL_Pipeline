@@ -1,11 +1,20 @@
 """Sklearn estimator adapter and stub components."""
+
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 
-from pipeline.protocols import ArrayLike, Loss, LossProtocol, ModelProtocol, OptimizerProtocol, Parameter
+from pipeline.protocols import (
+    ArrayLike,
+    Loss,
+    LossProtocol,
+    ModelProtocol,
+    OptimizerProtocol,
+    Parameter,
+)
 
 
 class StubLoss(LossProtocol):
@@ -64,7 +73,7 @@ class SklearnModel(ModelProtocol):
             subclasses that need to call ``.fit()`` directly.
     """
 
-    def __init__(self, estimator: object) -> None:
+    def __init__(self, estimator: Any) -> None:
         """Wrap an sklearn estimator.
 
         Args:

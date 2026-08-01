@@ -9,8 +9,9 @@ Usage::
 
     from pipeline.training import TrainLoop, SGD, Adam, MSELoss, CrossEntropyLoss
 """
-from pipeline.training.train_loop import TrainLoop
+
+from pipeline.training.losses import CrossEntropyLoss, MSELoss
 from pipeline.training.optimizers import SGD, Adam
-from pipeline.training.losses import MSELoss, CrossEntropyLoss
+from pipeline.training.train_loop import TrainLoop
 
 __all__ = ["TrainLoop", "SGD", "Adam", "MSELoss", "CrossEntropyLoss"]

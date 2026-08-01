@@ -4,6 +4,7 @@ Tests the full pipeline lifecycle: data loading, model building,
 training, evaluation, and export, using real Phase 1 components
 with fake model/loss/optimizer.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -26,12 +27,14 @@ def _make_tiny_csv(path: str) -> None:
     """
     import pandas as pd
 
-    df = pd.DataFrame({
-        "f1": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-        "f2": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-        "f3": [1, 0, 1, 0, 1, 0, 1, 0],
-        "label": [0, 1, 0, 1, 0, 1, 0, 1],
-    })
+    df = pd.DataFrame(
+        {
+            "f1": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+            "f2": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+            "f3": [1, 0, 1, 0, 1, 0, 1, 0],
+            "label": [0, 1, 0, 1, 0, 1, 0, 1],
+        }
+    )
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(path, index=False)
 
@@ -73,12 +76,8 @@ class TestPipelineE2E:
                     from pipeline.data.csv_source import CsvDataSource
                     from pipeline.data.split import train_test_split
 
-                    source = CsvDataSource(
-                        csv_path, batch_size=config.batch_size, shuffle=False
-                    )
-                    train, val = train_test_split(
-                        source, train_ratio=config.train_ratio
-                    )
+                    source = CsvDataSource(csv_path, batch_size=config.batch_size, shuffle=False)
+                    train, val = train_test_split(source, train_ratio=config.train_ratio)
                     state.data_stream = train
                     state.val_data_stream = val
 
@@ -104,20 +103,10 @@ class TestPipelineE2E:
                     class _FakeLossFn:
                         """MSE loss returning a Loss object."""
 
-                        def forward(
-                            self, p: np.ndarray, t: np.ndarray
-                        ) -> Loss:
-                            return Loss(
-                                float(
-                                    np.mean(
-                                        (np.asarray(p) - np.asarray(t)) ** 2
-                                    )
-                                )
-                            )
+                        def forward(self, p: np.ndarray, t: np.ndarray) -> Loss:
+                            return Loss(float(np.mean((np.asarray(p) - np.asarray(t)) ** 2)))
 
-                        def __call__(
-                            self, p: np.ndarray, t: np.ndarray
-                        ) -> Loss:
+                        def __call__(self, p: np.ndarray, t: np.ndarray) -> Loss:
                             return self.forward(p, t)
 
                     class _FakeOpt:
@@ -154,9 +143,7 @@ class TestPipelineE2E:
                     if state.val_data_stream is not None:
                         preds = []
                         for batch in state.val_data_stream:
-                            p = np.asarray(
-                                state.model.forward(batch.inputs)
-                            )
+                            p = np.asarray(state.model.forward(batch.inputs))
                             preds.append(p.reshape(-1))
                         state.predictions = np.concatenate(preds)
                         # to_csv reshapes 1D arrays to (1, N);
@@ -210,9 +197,7 @@ class TestPipelineE2E:
                     from pipeline.data.csv_source import CsvDataSource
                     from pipeline.data.split import train_test_split
 
-                    source = CsvDataSource(
-                        csv_path, batch_size=2, shuffle=False
-                    )
+                    source = CsvDataSource(csv_path, batch_size=2, shuffle=False)
                     train, val = train_test_split(source)
                     state.data_stream = train
                     state.val_data_stream = val

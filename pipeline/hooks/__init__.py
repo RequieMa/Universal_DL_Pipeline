@@ -10,6 +10,7 @@ Usage::
 
     pipeline.add_hook(ProgressHook())
 """
+
 from __future__ import annotations
 
 from pipeline.hooks.base import BaseHook

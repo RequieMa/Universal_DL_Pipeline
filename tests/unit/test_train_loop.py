@@ -1,4 +1,5 @@
 """Unit tests for TrainLoop — the training lifecycle manager with hook dispatch."""
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -11,7 +12,6 @@ from pipeline.pipeline import PipelineState
 from pipeline.protocols import Batch, Loss
 
 if TYPE_CHECKING:
-
     from pipeline.config import Config
 
 # ---------------------------------------------------------------------------
@@ -125,9 +125,11 @@ class TestTrainLoopRunHistory:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0], [2.0]]), targets=np.array([[2.0], [4.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0], [2.0]]), targets=np.array([[2.0], [4.0]])),
+            ]
+        )
         loop = TrainLoop(
             model=FakeModel(),
             data_stream=stream,
@@ -149,11 +151,13 @@ class TestTrainLoopRunHistory:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-            Batch(inputs=np.array([[3.0]]), targets=np.array([[6.0]])),
-            Batch(inputs=np.array([[5.0]]), targets=np.array([[10.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+                Batch(inputs=np.array([[3.0]]), targets=np.array([[6.0]])),
+                Batch(inputs=np.array([[5.0]]), targets=np.array([[10.0]])),
+            ]
+        )
         loop = TrainLoop(
             model=FakeModel(),
             data_stream=stream,
@@ -171,9 +175,11 @@ class TestTrainLoopRunHistory:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         loop = TrainLoop(
             model=FakeModel(),
             data_stream=stream,
@@ -191,9 +197,11 @@ class TestTrainLoopRunHistory:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[100.0]]), targets=np.array([[0.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[100.0]]), targets=np.array([[0.0]])),
+            ]
+        )
         loop = TrainLoop(
             model=FakeModel(),
             data_stream=stream,
@@ -221,9 +229,11 @@ class TestTrainLoopStateUpdates:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         _ = TrainLoop(
             model=FakeModel(),
             data_stream=stream,
@@ -240,9 +250,11 @@ class TestTrainLoopStateUpdates:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         loop = TrainLoop(
             model=FakeModel(),
             data_stream=stream,
@@ -260,9 +272,11 @@ class TestTrainLoopStateUpdates:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         loop = TrainLoop(
             model=FakeModel(),
             data_stream=stream,
@@ -306,9 +320,11 @@ class TestTrainLoopHookDispatch:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         spy = _SpyHook()
         loop = TrainLoop(
             model=FakeModel(),
@@ -328,9 +344,11 @@ class TestTrainLoopHookDispatch:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         spy = _SpyHook()
         loop = TrainLoop(
             model=FakeModel(),
@@ -350,10 +368,12 @@ class TestTrainLoopHookDispatch:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-            Batch(inputs=np.array([[3.0]]), targets=np.array([[6.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+                Batch(inputs=np.array([[3.0]]), targets=np.array([[6.0]])),
+            ]
+        )
         spy = _SpyHook()
         loop = TrainLoop(
             model=FakeModel(),
@@ -373,9 +393,11 @@ class TestTrainLoopHookDispatch:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         spy = _SpyHook()
         loop = TrainLoop(
             model=FakeModel(),
@@ -397,9 +419,11 @@ class TestTrainLoopHookDispatch:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         spy1 = _SpyHook()
         spy2 = _SpyHook()
         loop = TrainLoop(
@@ -440,9 +464,11 @@ class TestTrainLoopEarlyStopping:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         loop = TrainLoop(
             model=FakeModel(),
             data_stream=stream,
@@ -460,9 +486,11 @@ class TestTrainLoopEarlyStopping:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         loop = TrainLoop(
             model=FakeModel(),
             data_stream=stream,
@@ -480,9 +508,11 @@ class TestTrainLoopEarlyStopping:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         loop = TrainLoop(
             model=FakeModel(),
             data_stream=stream,
@@ -501,9 +531,11 @@ class TestTrainLoopEarlyStopping:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModel, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
 
         class CrashingHook(BaseHook):
             def on_batch_end(self, batch, loss, state):
@@ -536,9 +568,11 @@ class TestTrainLoopGradientUpdate:
         from tests.unit.conftest import FakeDataStream, FakeLoss, FakeModelWithParams, FakeOptimizer
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0, 2.0, 3.0, 4.0]]), targets=np.array([[0.5, 1.5]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0, 2.0, 3.0, 4.0]]), targets=np.array([[0.5, 1.5]])),
+            ]
+        )
         opt = FakeOptimizer()
         loop = TrainLoop(
             model=FakeModelWithParams(in_features=4, out_features=2),
@@ -598,9 +632,11 @@ class TestTrainLoopNoParams:
                 pass
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         loop = TrainLoop(
             model=NoParamModel(),
             data_stream=stream,
@@ -676,9 +712,11 @@ class TestTrainLoopWithLossObject:
                 self.zero_count += 1
 
         state = _make_state()
-        stream = FakeDataStream([
-            Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
-        ])
+        stream = FakeDataStream(
+            [
+                Batch(inputs=np.array([[1.0]]), targets=np.array([[2.0]])),
+            ]
+        )
         opt = _CountOptimizer()
         loop = TrainLoop(
             model=FakeModel(),

@@ -1,4 +1,5 @@
 """Unit tests for pipeline.registry — DI registry."""
+
 import pytest
 
 from pipeline.registry import build, is_registered, list_registered, register
@@ -111,6 +112,7 @@ class TestRegistryStress:
         """Stress: register 500 classes and build each one."""
         n = 500
         for i in range(n):
+
             @register("stress_test", f"cls_{i}")
             class _StressClass:
                 def __init__(self, idx: int = i):
@@ -129,6 +131,7 @@ class TestRegistryIsolation:
 
     def test_registry_no_cross_kind_leakage(self):
         """Concurrency: registering under one kind doesn't affect others."""
+
         @register("isolated_kind", "test_cls")
         class _Isolated:
             pass

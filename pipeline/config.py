@@ -4,6 +4,7 @@ A single source of truth for all pipeline settings. Serialized
 to/from YAML files. Every field has a sensible default so students
 can start with ``Config()`` and add options as they learn them.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

@@ -1,4 +1,5 @@
 """Unit tests for pipeline.pipeline — BasePipeline only."""
+
 import numpy as np
 import pytest
 
@@ -230,13 +231,17 @@ class TestBasePipelineTrainDefault:
 
     def test_train_is_not_abstract(self):
         """Happy Path: subclasses without train() can be instantiated."""
+
         class PipelineNoTrain(BasePipeline):
             def load_data(self, state):
                 pass
+
             def build_model(self, state):
                 pass
+
             def evaluate(self, state):
                 pass
+
             def export(self, state):
                 pass
 

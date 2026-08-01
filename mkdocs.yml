@@ -48,10 +48,12 @@ nav:
       - Training: api/training.md
       - Evaluation: api/evaluation.md
       - Export: api/export.md
+      - Adapters: api/adapters.md
       - Utils: api/utils.md
   - Design:
       - Architecture Spec: superpowers/specs/2026-07-28-pipeline-architecture-design.md
       - Phase 1 Framework: superpowers/specs/2026-07-29-phase-1-framework-design.md
+      - Phase 2 Table Adapters: superpowers/specs/2026-07-30-phase-2-table-adapters-design.md
 
 markdown_extensions:
   - pymdownx.highlight:

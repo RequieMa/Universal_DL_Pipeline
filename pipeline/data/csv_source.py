@@ -3,6 +3,7 @@
 Provides :class:`CsvDataSource`, a :class:`DataStream` implementation
 that reads tabular data from CSV files and yields :class:`Batch` objects.
 """
+
 from __future__ import annotations
 
 import math

@@ -12,6 +12,7 @@ Protocols defined here:
     - :class:`LossProtocol` — a loss function
     - :class:`OptimizerProtocol` — a parameter optimizer
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -94,10 +95,7 @@ class Batch:
         """
         if not isinstance(other, Batch):
             return NotImplemented
-        return (
-            _array_equal(self.inputs, other.inputs)
-            and _array_equal(self.targets, other.targets)
-        )
+        return _array_equal(self.inputs, other.inputs) and _array_equal(self.targets, other.targets)
 
 
 @dataclass

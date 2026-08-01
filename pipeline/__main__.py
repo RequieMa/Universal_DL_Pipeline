@@ -2,6 +2,7 @@
 
 Prints version, device information, and all registered pipeline components.
 """
+
 from __future__ import annotations
 
 

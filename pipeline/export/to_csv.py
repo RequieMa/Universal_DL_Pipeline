@@ -2,6 +2,7 @@
 
 Writes numpy arrays and array-like objects to CSV files via pandas.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

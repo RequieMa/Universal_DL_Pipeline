@@ -3,6 +3,7 @@
 Splits a :class:`DataStream` into two independent streams
 for training and validation.
 """
+
 from __future__ import annotations
 
 import math

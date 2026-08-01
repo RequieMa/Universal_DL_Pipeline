@@ -1,4 +1,5 @@
 """Unit tests for pipeline.training.losses — MSELoss, CrossEntropyLoss."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -155,9 +156,7 @@ class TestCrossEntropyLoss:
         loss_fn = CrossEntropyLoss()
         logits = np.array([[1.0, 2.0], [3.0, 1.0]])
         targets = np.array([1, 0])
-        assert float(loss_fn(logits, targets)) == float(
-            loss_fn.forward(logits, targets)
-        )
+        assert float(loss_fn(logits, targets)) == float(loss_fn.forward(logits, targets))
 
     def test_backward_noop_without_model(self) -> None:
         """backward() is no-op when no model attached."""

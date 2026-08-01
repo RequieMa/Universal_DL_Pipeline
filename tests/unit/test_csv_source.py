@@ -1,4 +1,5 @@
 """Unit tests for pipeline.data.csv_source -- CsvDataSource."""
+
 from __future__ import annotations
 
 import tempfile
@@ -15,14 +16,14 @@ def tiny_csv() -> str:
     """Write a temporary CSV for testing."""
     import pandas as pd
 
-    df = pd.DataFrame({
-        "a": [1.0, 2.0, 3.0, 4.0, 5.0],
-        "b": [0.1, 0.2, 0.3, 0.4, 0.5],
-        "label": [0, 1, 0, 1, 0],
-    })
-    with tempfile.NamedTemporaryFile(
-        mode="w", suffix=".csv", delete=False
-    ) as f:
+    df = pd.DataFrame(
+        {
+            "a": [1.0, 2.0, 3.0, 4.0, 5.0],
+            "b": [0.1, 0.2, 0.3, 0.4, 0.5],
+            "label": [0, 1, 0, 1, 0],
+        }
+    )
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
         df.to_csv(f, index=False)
         return f.name
 
@@ -63,9 +64,7 @@ class TestCsvDataSourceBasic:
 
     def test_explicit_target_column(self, tiny_csv):
         """Happy Path: explicit target_column uses that column as target."""
-        source = CsvDataSource(
-            tiny_csv, batch_size=5, target_column="label", shuffle=False
-        )
+        source = CsvDataSource(tiny_csv, batch_size=5, target_column="label", shuffle=False)
         batch = next(iter(source))
         # inputs should have only 'a' and 'b' columns
         assert batch.inputs.shape == (5, 2)

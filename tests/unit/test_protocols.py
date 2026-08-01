@@ -1,4 +1,5 @@
 """Unit tests for pipeline.protocols — data structures and abstract interfaces."""
+
 import numpy as np
 import pytest
 
@@ -172,10 +173,7 @@ class TestDataStream:
 
     def test_len_returns_count(self):
         """Happy Path: DataStream len returns batch count."""
-        batches = [
-            Batch(inputs=np.array([i]), targets=np.array([i]))
-            for i in range(3)
-        ]
+        batches = [Batch(inputs=np.array([i]), targets=np.array([i])) for i in range(3)]
         stream = FakeDataStream(batches)
         assert len(stream) == 3
 
@@ -194,8 +192,7 @@ class TestDataStream:
         """Stress: DataStream with 1000 batches iterates correctly."""
         n = 1000
         batches = [
-            Batch(inputs=np.array([float(i)]), targets=np.array([float(i)]))
-            for i in range(n)
+            Batch(inputs=np.array([float(i)]), targets=np.array([float(i)])) for i in range(n)
         ]
         stream = FakeDataStream(batches)
         assert len(stream) == n

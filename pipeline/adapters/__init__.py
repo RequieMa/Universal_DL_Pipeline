@@ -12,8 +12,9 @@ Usage::
 Imports are lazy — sklearn is only imported when :class:`SklearnModel`
 is instantiated, not when the module loads.
 """
-from pipeline.adapters.sklearn_adapter import SklearnModel, StubLoss, StubOptimizer
+
 from pipeline.adapters.numpy_adapter import NumpyModel, NumpyOptimizer
+from pipeline.adapters.sklearn_adapter import SklearnModel, StubLoss, StubOptimizer
 
 __all__ = [
     "SklearnModel",

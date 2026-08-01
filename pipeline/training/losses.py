@@ -14,6 +14,7 @@ Usage::
     loss = loss_fn(predictions, targets)  # Loss with _backward_fn
     loss.backward()  # propagates to model params
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -111,7 +112,6 @@ class CrossEntropyLoss(LossProtocol):
         value = float(-np.mean(np.log(target_probs + 1e-8)))
 
         # One-hot for gradient computation
-        n_classes = logits.shape[1]
         y_onehot = np.zeros_like(probs)
         y_onehot[np.arange(batch_size), targets_arr.astype(np.int64)] = 1.0
 

@@ -1,4 +1,5 @@
 """Unit tests for pipeline.adapters.sklearn_adapter."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -9,13 +10,12 @@ from pipeline.protocols import Loss
 
 try:
     import sklearn  # noqa: F401
+
     _HAS_SKLEARN = True
 except ImportError:
     _HAS_SKLEARN = False
 
-requires_sklearn = pytest.mark.skipif(
-    not _HAS_SKLEARN, reason="sklearn not installed"
-)
+requires_sklearn = pytest.mark.skipif(not _HAS_SKLEARN, reason="sklearn not installed")
 
 
 class TestStubLoss:

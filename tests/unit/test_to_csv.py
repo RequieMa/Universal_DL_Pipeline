@@ -1,4 +1,5 @@
 """Unit tests for pipeline.export.to_csv — to_csv()."""
+
 from __future__ import annotations
 
 import tempfile
@@ -15,9 +16,7 @@ class TestToCsv:
     def test_writes_file(self):
         """Happy Path: to_csv creates a file at the given path."""
         data = np.array([[1.0, 2.0], [3.0, 4.0]])
-        with tempfile.NamedTemporaryFile(
-            suffix=".csv", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as f:
             path = f.name
         try:
             to_csv(data, path)
@@ -30,18 +29,14 @@ class TestToCsv:
         import pandas as pd
 
         data = np.array([[1.0, 0.5], [2.0, 0.3], [3.0, 0.1]])
-        with tempfile.NamedTemporaryFile(
-            suffix=".csv", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as f:
             path = f.name
         try:
             to_csv(data, path, columns=["pred_0", "pred_1"])
             df = pd.read_csv(path)
             assert list(df.columns) == ["pred_0", "pred_1"]
             assert df.shape == (3, 2)
-            np.testing.assert_array_almost_equal(
-                df.values, data
-            )
+            np.testing.assert_array_almost_equal(df.values, data)
         finally:
             Path(path).unlink(missing_ok=True)
 
@@ -50,9 +45,7 @@ class TestToCsv:
         import pandas as pd
 
         data = np.array([[1.0, 2.0]])
-        with tempfile.NamedTemporaryFile(
-            suffix=".csv", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as f:
             path = f.name
         try:
             to_csv(data, path)
@@ -64,9 +57,7 @@ class TestToCsv:
     def test_single_row(self):
         """Boundary: single-row array."""
         data = np.array([[0.1, 0.9]])
-        with tempfile.NamedTemporaryFile(
-            suffix=".csv", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as f:
             path = f.name
         try:
             to_csv(data, path)
@@ -77,9 +68,7 @@ class TestToCsv:
     def test_1d_array(self):
         """Happy Path: 1D array is reshaped for CSV writing."""
         data = np.array([0.1, 0.2, 0.3])
-        with tempfile.NamedTemporaryFile(
-            suffix=".csv", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as f:
             path = f.name
         try:
             to_csv(data, path)
@@ -100,4 +89,5 @@ class TestToCsv:
             assert Path(path).exists()
         finally:
             import shutil
+
             shutil.rmtree(tmpdir, ignore_errors=True)

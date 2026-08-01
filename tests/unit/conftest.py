@@ -14,6 +14,7 @@ Fakes defined here:
 Fixtures (pytest fixtures):
     - :func:`tiny_titanic_path` — path to the tiny_titanic.csv fixture
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterator

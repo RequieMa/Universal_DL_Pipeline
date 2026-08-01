@@ -15,6 +15,7 @@ Usage::
     # ... backward pass populates param.grad ...
     opt.step()
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -53,6 +54,7 @@ class SGD:
         Args:
             param: Parameter with ``.data`` and ``.grad`` populated.
         """
+        assert param.grad is not None, f"Parameter {param.name} has no gradient"
         param.data = param.data - self.lr * param.grad
 
 
@@ -103,6 +105,7 @@ class Adam:
             param: Parameter with ``.data`` and ``.grad`` populated.
         """
         self._t += 1
+        assert param.grad is not None, f"Parameter {param.name} has no gradient"
         key = id(param)
         if key not in self._m:
             self._m[key] = np.zeros_like(param.data)

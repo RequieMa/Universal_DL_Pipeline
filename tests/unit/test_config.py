@@ -1,4 +1,5 @@
 """Unit tests for pipeline.config — Config dataclass."""
+
 import pytest
 
 from pipeline.config import Config

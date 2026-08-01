@@ -1,4 +1,5 @@
 """Unit tests for pipeline.data.split -- train_test_split."""
+
 from __future__ import annotations
 
 import numpy as np

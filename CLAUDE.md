@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A **teaching-first, framework-agnostic deep learning pipeline library**. The pipeline defines *when* things happen (six stages: load → extract → build → train → evaluate → export). Concrete implementations — numpy, sklearn, PyTorch, or your own — define *how*. Protocols are the contract, not framework classes.
 
-**Phase 1 (complete).** The core operates purely on protocols with fake models — no torch/sklearn/sympy in `pipeline/`. Real framework adapters arrive in Phase 2 (table/sklearn) and Phase 3 (image/torch). See `STATUS.md` for the full roadmap.
+**Phase 2 (complete).** The core operates purely on protocols — no torch in `pipeline/`. Sklearn, numpy, and sympy adapters are built and tested. Contract tests verify both `SklearnModel` and `NumpyModel` satisfy `ModelProtocol`. Phase 3 (image/torch) is next. See `STATUS.md` for the full roadmap.
 
 ## Core architecture
 
@@ -47,6 +47,18 @@ A **teaching-first, framework-agnostic deep learning pipeline library**. The pip
 Five hook points, all no-ops by default (`BaseHook` is not an ABC): `on_stage_start`, `on_stage_end`, `on_epoch_start`, `on_epoch_end`, `on_batch_end`. Called in registration order. Hook exceptions are **caught and logged** — they never interrupt the pipeline or training loop.
 
 TrainLoop borrows the pipeline's hooks via `pipeline.hooks` property. `ProgressHook` wraps tqdm.
+
+### Adapters — framework bridges
+
+`pipeline/adapters/` provides `ModelProtocol` wrappers for sklearn and numpy:
+
+- **`SklearnModel`** — wraps any sklearn estimator. `forward()` delegates to `predict_proba()` (classifiers) or `predict()` (regressors). `parameters()` returns `[]` — no gradient parameters. Use `StubLoss` + `StubOptimizer` to satisfy the pipeline contract since sklearn handles training internally via `.fit()`.
+- **`NumpyModel`** — pure-numpy model with explicit `Parameter` objects. `forward()` caches intermediate activations; `backward(dL_doutput)` propagates gradients through all layers via the chain rule.
+- **`NumpyOptimizer`** — bridges `OptimizerProtocol` with `SGD`/`Adam` update rules. Iterates over Parameter refs, delegates each to `rule.update(param)`.
+
+### Training components
+
+`pipeline/training/` includes `TrainLoop` plus pure-numpy optimizer rules (`SGD`, `Adam`) and loss functions (`MSELoss`, `CrossEntropyLoss`). Loss functions optionally attach a `NumpyModel` — when attached, `loss.backward()` propagates gradients to every parameter.
 
 ### Lazy imports
 
@@ -98,21 +110,22 @@ python run.py --config config.yaml --mode train
 - **Build backend:** hatchling, wheel only (`tool.hatch.build.targets.wheel` packages = `["pipeline"]`)
 - **Python:** `>=3.11,<3.14` (uses `from __future__ import annotations` everywhere)
 - **Core deps:** numpy, pandas, pyyaml, tqdm (no frameworks)
-- **Dev deps:** pytest, pytest-cov, ruff, mypy
+- **Dev deps:** pytest, pytest-cov, ruff, mypy, pandas-stubs, types-tqdm, scikit-learn
 - **Docs deps:** mkdocs-material, mkdocstrings[python], mkdocs-static-i18n
 - **Console script:** `dl-pipeline` → `pipeline.__main__:main`
+- **Version:** 0.2.0
 
 ## Tooling conventions
 
 - **Docs:** MkDocs Material + mkdocstrings, Google-style docstrings. Config in `mkdocs.yml`.
 - **Linter:** ruff, line-length 100, target py311. Rules: E, F, I, N, W, UP, B, C4, SIM. One file-level ignore: `pipeline/pipeline.py` B027 (intentional no-op in `extract_features`).
-- **Type checker:** mypy strict mode. Stub warnings expected on py3.13.
+- **Type checker:** mypy strict mode, python_version=3.12. Stub warnings expected on py3.13.
 - **Formatter:** ruff format, double quotes, space indent.
 - **WSL2:** `uv` link-mode is `copy` (cross-filesystem compatibility in `pyproject.toml`).
 
 ## Testing
 
-- **225 tests** in `tests/unit/` (per-module) and `tests/integration/` (E2E).
+- **283 tests** in `tests/unit/` (per-module), `tests/contract/` (adapter contract), and `tests/integration/` (E2E).
 - **Test doubles** live in `tests/unit/conftest.py`: `FakeDataStream`, `FakeModel` (x→2*x), `FakeModelWithParams` (linear Wx+b with mutable Parameter refs), `FakeLoss` (MSE), `FakeOptimizer` (call-counting).
 - **Fixture:** `tiny_titanic.csv` (10 rows, 4 cols, committed) at `tests/fixtures/`.
 - Integration E2E test validates the full pipeline: CSV → TrainTestSplit → TrainLoop → Metrics → to_csv, plus infer-mode skip behavior.
@@ -122,7 +135,7 @@ python run.py --config config.yaml --mode train
 
 ## Phase roadmap (from STATUS.md)
 
-Phase 2 (NEXT) — table adapters: sklearn + sympy→numpy. Phase 3 — image + TorchAdapter. Phase 4 — production inference/checkpointing. Phase 5 — HPO + ensemble. Phase 6 — sequences/NLP.
+Phase 0–2 complete. Phase 3 (NEXT) — image + TorchAdapter → M4. Phase 4 — production inference/checkpointing. Phase 5 — HPO + ensemble. Phase 6 — sequences/NLP.
 
 ## Key design rules
 

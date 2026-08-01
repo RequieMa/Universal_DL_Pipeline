@@ -1,4 +1,5 @@
 """Unit tests for pipeline.hooks.progress — ProgressHook."""
+
 from __future__ import annotations
 
 from unittest.mock import patch

@@ -1,4 +1,5 @@
 """Unit tests for pipeline.adapters.numpy_adapter — NumpyModel, NumpyOptimizer."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -118,14 +119,10 @@ class TestNumpyModelBackward:
         dL_dout = np.array([[0.5]])
         model.backward(dL_dout)
         # dL/db = sum(dL/dout) = 0.5
-        np.testing.assert_array_almost_equal(
-            list(model.parameters())[1].grad, np.array([0.5])
-        )
+        np.testing.assert_array_almost_equal(list(model.parameters())[1].grad, np.array([0.5]))
         # dL/dW = dL/dout.T @ x = [[0.5]] @ [[1,3]] = [[0.5, 1.5]]
         expected_dW = dL_dout.T @ x  # (1,1) @ (1,2) = (1,2)
-        np.testing.assert_array_almost_equal(
-            list(model.parameters())[0].grad, expected_dW
-        )
+        np.testing.assert_array_almost_equal(list(model.parameters())[0].grad, expected_dW)
 
     def test_backward_propagates_through_two_layers(self) -> None:
         """Gradients flow through both layers."""

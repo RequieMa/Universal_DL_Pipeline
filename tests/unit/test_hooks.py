@@ -1,4 +1,5 @@
 """Unit tests for pipeline.hooks — BaseHook."""
+
 from pipeline.config import Config
 from pipeline.hooks import BaseHook
 from pipeline.pipeline import PipelineState
@@ -38,12 +39,16 @@ class TestBaseHook:
         class FullHook(BaseHook):
             def on_stage_start(self, stage, state):
                 log.append(f"stage_start:{stage}")
+
             def on_stage_end(self, stage, state):
                 log.append(f"stage_end:{stage}")
+
             def on_epoch_start(self, epoch, state):
                 log.append(f"epoch_start:{epoch}")
+
             def on_epoch_end(self, epoch, state):
                 log.append(f"epoch_end:{epoch}")
+
             def on_batch_end(self, batch, loss, state):
                 log.append(f"batch:{batch}:{loss}")
 
@@ -98,6 +103,7 @@ class TestBaseHook:
         class CounterHook(BaseHook):
             def __init__(self, tag: str):
                 self.tag = tag
+
             def on_stage_start(self, stage, state):
                 nonlocal counter_a, counter_b
                 if self.tag == "a":

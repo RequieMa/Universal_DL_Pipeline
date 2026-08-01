@@ -4,6 +4,7 @@ Verifies that every ModelProtocol implementation satisfies the
 pipeline contract — forward shape, mode toggling, and end-to-end
 on the Titanic dataset.
 """
+
 from __future__ import annotations
 
 import tempfile
@@ -15,6 +16,7 @@ import pytest
 
 try:
     import sklearn  # noqa: F401
+
     _HAS_SKLEARN = True
 except ImportError:
     _HAS_SKLEARN = False
@@ -35,12 +37,14 @@ def _make_titanic_csv(path: str) -> str:
     """
     import pandas as pd
 
-    df = pd.DataFrame({
-        "feature_a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
-        "feature_b": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
-        "feature_c": [22.0, 38.0, 25.0, 40.0, 30.0, 35.0, 28.0, 45.0],
-        "survived": [0, 1, 0, 1, 0, 1, 0, 1],
-    })
+    df = pd.DataFrame(
+        {
+            "feature_a": [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0],
+            "feature_b": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+            "feature_c": [22.0, 38.0, 25.0, 40.0, 30.0, 35.0, 28.0, 45.0],
+            "survived": [0, 1, 0, 1, 0, 1, 0, 1],
+        }
+    )
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(path, index=False)
     return path
@@ -70,9 +74,7 @@ def _make_sklearn_pipeline(csv_path: str):
         """Sklearn LogisticRegression on Titanic test subset."""
 
         def load_data(self, state: PipelineState) -> None:
-            source = CsvDataSource(
-                csv_path, batch_size=config.batch_size, shuffle=False
-            )
+            source = CsvDataSource(csv_path, batch_size=config.batch_size, shuffle=False)
             train, val = train_test_split(source, train_ratio=config.train_ratio)
             state.data_stream = train
             state.val_data_stream = val
@@ -129,9 +131,7 @@ def _make_numpy_pipeline(csv_path: str):
         """Two-layer numpy MLP on Titanic test subset."""
 
         def load_data(self, state: PipelineState) -> None:
-            source = CsvDataSource(
-                csv_path, batch_size=config.batch_size, shuffle=False
-            )
+            source = CsvDataSource(csv_path, batch_size=config.batch_size, shuffle=False)
             train, val = train_test_split(source, train_ratio=config.train_ratio)
             state.data_stream = train
             state.val_data_stream = val
@@ -144,9 +144,7 @@ def _make_numpy_pipeline(csv_path: str):
             b2 = np.zeros(2)
             state.model = NumpyModel([(W1, b1), (W2, b2)], activation="relu")
             state.loss_fn = CrossEntropyLoss(model=state.model)
-            state.optimizer = NumpyOptimizer(
-                state.model.parameters(), SGD(lr=config.learning_rate)
-            )
+            state.optimizer = NumpyOptimizer(state.model.parameters(), SGD(lr=config.learning_rate))
             state.metrics = Metrics(accuracy=accuracy)
 
         def evaluate(self, state: PipelineState) -> None:
@@ -169,6 +167,7 @@ def _make_numpy_pipeline(csv_path: str):
 # ---------------------------------------------------------------------------
 # Pipeline builders registry
 # ---------------------------------------------------------------------------
+
 
 def _get_pipeline_builders() -> dict[str, Callable]:
     """Return available pipeline builders, keyed by adapter name."""
@@ -225,12 +224,6 @@ class TestModelContract:
             pipeline = builders[adapter_name](csv_path)
             state = pipeline.run("train")
             # All stages completed
-            assert state.history is not None, (
-                f"{adapter_name}: history not populated"
-            )
-            assert "accuracy" in state.metrics, (
-                f"{adapter_name}: accuracy not computed"
-            )
-            assert state.predictions is not None, (
-                f"{adapter_name}: predictions not set"
-            )
+            assert state.history is not None, f"{adapter_name}: history not populated"
+            assert "accuracy" in state.metrics, f"{adapter_name}: accuracy not computed"
+            assert state.predictions is not None, f"{adapter_name}: predictions not set"

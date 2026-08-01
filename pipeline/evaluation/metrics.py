@@ -4,6 +4,7 @@ Provides accuracy, precision, recall, F1 score, and confusion matrix
 as stateless pure functions, plus a :class:`Metrics` container that
 decouples the evaluate stage from specific metric choices.
 """
+
 from collections.abc import Callable, Iterator
 from typing import Any
 
@@ -100,9 +101,7 @@ def recall(
     return float(np.mean(scores))
 
 
-def f1_score(
-    y_true: ArrayLike, y_pred: ArrayLike, average: str = "binary"
-) -> float:
+def f1_score(y_true: ArrayLike, y_pred: ArrayLike, average: str = "binary") -> float:
     """F1 score: harmonic mean of precision and recall.
 
     Args:
@@ -170,22 +169,16 @@ class Metrics:
         print(state.metrics["accuracy"])  # -> 0.92
     """
 
-    def __init__(
-        self, **named_metrics: Callable[[ArrayLike, ArrayLike], float]
-    ) -> None:
+    def __init__(self, **named_metrics: Callable[[ArrayLike, ArrayLike], float]) -> None:
         """Register named metric functions.
 
         Args:
             **named_metrics: ``name=function`` pairs (e.g., ``accuracy=accuracy``).
         """
-        self._metrics: dict[str, Callable[[ArrayLike, ArrayLike], float]] = (
-            named_metrics
-        )
+        self._metrics: dict[str, Callable[[ArrayLike, ArrayLike], float]] = named_metrics
         self._values: dict[str, float] = {}
 
-    def compute(
-        self, y_true: ArrayLike, y_pred: ArrayLike
-    ) -> dict[str, float]:
+    def compute(self, y_true: ArrayLike, y_pred: ArrayLike) -> dict[str, float]:
         """Run all registered metrics and cache results.
 
         Args:
@@ -195,9 +188,7 @@ class Metrics:
         Returns:
             ``{name: value}`` dict with one entry per registered metric.
         """
-        self._values = {
-            name: fn(y_true, y_pred) for name, fn in self._metrics.items()
-        }
+        self._values = {name: fn(y_true, y_pred) for name, fn in self._metrics.items()}
         return self._values
 
     def __getitem__(self, name: str) -> float:

@@ -19,6 +19,7 @@ NOTE: The registry is a module-level ``dict``. Registration happens
 at import time when the decorator runs. This is intentional — it keeps
 the system simple enough for a beginner to understand in one reading.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -48,9 +49,11 @@ def register(kind: str, name: str) -> Callable[[type], type]:
         class ResNet18:
             ...
     """
+
     def decorator(cls: type) -> type:
         _REGISTRY.setdefault(kind, {})[name] = cls
         return cls
+
     return decorator
 
 

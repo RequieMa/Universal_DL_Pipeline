@@ -5,9 +5,11 @@ numpy arrays with explicit :class:`Parameter` objects — and
 :class:`NumpyOptimizer` — an :class:`OptimizerProtocol` that
 delegates to update rules (SGD, Adam).
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Any
 
 import numpy as np
 
@@ -54,12 +56,8 @@ class NumpyModel(ModelProtocol):
             raise ValueError("layers must not be empty")
         self._params: list[Parameter] = []
         for i, (W, b) in enumerate(layers):
-            self._params.append(
-                Parameter(data=W, grad=np.zeros_like(W), name=f"W{i}")
-            )
-            self._params.append(
-                Parameter(data=b, grad=np.zeros_like(b), name=f"b{i}")
-            )
+            self._params.append(Parameter(data=W, grad=np.zeros_like(W), name=f"W{i}"))
+            self._params.append(Parameter(data=b, grad=np.zeros_like(b), name=f"b{i}"))
         self._activation = activation
         self._training = True
         self._cache: dict[str, np.ndarray] = {}
@@ -162,7 +160,8 @@ class NumpyModel(ModelProtocol):
             ValueError: If activation is unknown.
         """
         if self._activation == "relu":
-            return np.maximum(0, z)
+            result: np.ndarray = np.maximum(0, z)
+            return result
         raise ValueError(f"Unknown activation: {self._activation}")
 
 
@@ -190,7 +189,7 @@ class NumpyOptimizer(OptimizerProtocol):
     def __init__(
         self,
         parameters: Iterable[Parameter],
-        rule: object,
+        rule: Any,
     ) -> None:
         self._params = list(parameters)
         self._rule = rule

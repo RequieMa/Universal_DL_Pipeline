@@ -19,6 +19,7 @@ Usage::
 
     pipeline.add_hook(MyLogger())
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -76,9 +77,7 @@ class BaseHook:
             state: Current pipeline state.
         """
 
-    def on_batch_end(
-        self, batch: int, loss: float, state: PipelineState
-    ) -> None:
+    def on_batch_end(self, batch: int, loss: float, state: PipelineState) -> None:
         """Called after each training batch.
 
         Use for progress bars and per-batch logging.

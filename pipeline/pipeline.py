@@ -6,6 +6,7 @@ abstract class that orchestrates the six pipeline stages.
 The pipeline defines *when* stages run. Concrete implementations define
 *how* each stage works by satisfying the protocols in :mod:`pipeline.protocols`.
 """
+
 from __future__ import annotations
 
 import logging

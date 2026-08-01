@@ -63,6 +63,7 @@ include = ["pipeline/**/*.py", "tests/**/*.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+ignore = ["N806", "N803"]  # math notation: W, b, dL_dout are conventional in ML
 
 [tool.ruff.lint.per-file-ignores]
 "pipeline/pipeline.py" = ["B027"]  # extract_features is intentionally a no-op

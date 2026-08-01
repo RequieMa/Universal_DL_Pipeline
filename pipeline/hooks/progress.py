@@ -3,6 +3,7 @@
 Provides :class:`ProgressHook` — a concrete :class:`BaseHook`
 that renders training progress with tqdm.
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
@@ -30,9 +31,7 @@ class ProgressHook(BaseHook):
         self._pbar: Any = None  # Any: tqdm is lazily imported, not typed at init
         self._losses: list[float] = []
 
-    def on_epoch_start(
-        self, epoch: int, state: PipelineState
-    ) -> None:
+    def on_epoch_start(self, epoch: int, state: PipelineState) -> None:
         """Create a new tqdm progress bar for this epoch.
 
         Args:
@@ -45,9 +44,7 @@ class ProgressHook(BaseHook):
         self._pbar = tqdm(total=total, desc=f"Epoch {epoch + 1}")
         self._losses.clear()
 
-    def on_batch_end(
-        self, batch: int, loss: float, state: PipelineState
-    ) -> None:
+    def on_batch_end(self, batch: int, loss: float, state: PipelineState) -> None:
         """Update the progress bar and record batch loss.
 
         Args:
@@ -60,9 +57,7 @@ class ProgressHook(BaseHook):
             self._pbar.set_postfix(loss=f"{loss:.4f}")
         self._losses.append(loss)
 
-    def on_epoch_end(
-        self, epoch: int, state: PipelineState
-    ) -> None:
+    def on_epoch_end(self, epoch: int, state: PipelineState) -> None:
         """Close the progress bar for this epoch.
 
         Args:

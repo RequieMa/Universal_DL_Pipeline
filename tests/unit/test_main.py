@@ -1,4 +1,5 @@
 """Unit tests for pipeline.__main__ and CLI entry."""
+
 from __future__ import annotations
 
 import io
@@ -57,4 +58,5 @@ class TestRunPy:
     def test_run_py_module_exists(self):
         """Happy Path: run.py can be imported."""
         from pathlib import Path
+
         assert Path("run.py").exists()

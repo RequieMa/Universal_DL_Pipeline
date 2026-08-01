@@ -32,10 +32,7 @@ def get_device(preference: str = "auto") -> str:
 
     valid = {"cpu", "cuda", "mps"}
     if preference not in valid:
-        raise ValueError(
-            f"Unknown device: {preference!r}. "
-            f"Choose from: {', '.join(sorted(valid))}"
-        )
+        raise ValueError(f"Unknown device: {preference!r}. Choose from: {', '.join(sorted(valid))}")
 
     # NOTE: For explicit requests (not "auto"), return as-is.
     # Availability is checked by the framework adapter (e.g.,
