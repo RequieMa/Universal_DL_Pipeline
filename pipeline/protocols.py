@@ -61,7 +61,7 @@ class Parameter:
         )
 
 
-def _array_equal(a: object, b: object) -> bool:
+def _array_equal(a: ArrayLike, b: ArrayLike) -> bool:
     """Check array equality, handling None."""
     if a is None and b is None:
         return True

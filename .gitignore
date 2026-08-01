@@ -11,8 +11,9 @@ build/
 # uv
 uv.lock
 
-# Data files (test datasets, gitignored)
+# Data files (test datasets, gitignored — sample train.csv is an exception)
 data/*.csv
+!data/train.csv
 data/*.zip
 data/*.gz
 data/*.tar

@@ -5,7 +5,7 @@ that renders training progress with tqdm.
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pipeline.hooks.base import BaseHook
 
@@ -27,7 +27,7 @@ class ProgressHook(BaseHook):
 
     def __init__(self) -> None:
         """Initialize the progress hook."""
-        self._pbar = None
+        self._pbar: Any = None  # Any: tqdm is lazily imported, not typed at init
         self._losses: list[float] = []
 
     def on_epoch_start(

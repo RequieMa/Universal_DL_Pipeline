@@ -42,8 +42,8 @@ def set_seed(seed: int, deterministic: bool = False) -> None:
 
         torch.manual_seed(seed)
         if deterministic and torch.cuda.is_available():
-            torch.backends.cudnn.deterministic = True  # type: ignore[attr-defined]
-            torch.backends.cudnn.benchmark = False  # type: ignore[attr-defined]
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
             # NOTE: CUBLAS workspace config required for deterministic
             # cuDNN convolution algorithms.
             import os

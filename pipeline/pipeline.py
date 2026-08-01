@@ -211,7 +211,14 @@ class BasePipeline(ABC):
         # WHY: Lazy import avoids circular imports -- TrainLoop imports
         # PipelineState from pipeline.pipeline, but at this point both
         # modules are already loaded.
-        from pipeline.training.train_loop import TrainLoop  # type: ignore[import-untyped]
+        from pipeline.training.train_loop import TrainLoop
+
+        # Assert non-None: build_model() is called before train() in the
+        # Template Method sequence; None values indicate a subclass bug.
+        assert state.model is not None, "state.model must be set before train()"
+        assert state.data_stream is not None, "state.data_stream must be set before train()"
+        assert state.optimizer is not None, "state.optimizer must be set before train()"
+        assert state.loss_fn is not None, "state.loss_fn must be set before train()"
 
         loop = TrainLoop(
             model=state.model,
