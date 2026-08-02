@@ -110,7 +110,7 @@ python run.py --config config.yaml --mode train
 - **Build backend:** hatchling, wheel only (`tool.hatch.build.targets.wheel` packages = `["pipeline"]`)
 - **Python:** `>=3.11,<3.14` (uses `from __future__ import annotations` everywhere)
 - **Core deps:** numpy, pandas, pyyaml, tqdm (no frameworks)
-- **Dev deps:** pytest, pytest-cov, ruff, mypy, pandas-stubs, types-tqdm, scikit-learn
+- **Dev deps:** pytest, pytest-cov, ruff, mypy, pandas-stubs, types-tqdm, scikit-learn, ipykernel, sympy, matplotlib
 - **Docs deps:** mkdocs-material, mkdocstrings[python], mkdocs-static-i18n
 - **Console script:** `dl-pipeline` → `pipeline.__main__:main`
 - **Version:** 0.2.0
