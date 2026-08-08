@@ -1,5 +1,6 @@
 """Hyperparameter optimization and ensemble methods."""
 
+from pipeline.hpo.ensemble import StackingEnsemble, VotingEnsemble
 from pipeline.hpo.search import (
     BaseSearch,
     GridSearch,
@@ -13,5 +14,7 @@ __all__ = [
     "GridSearch",
     "RandomSearch",
     "SearchResult",
+    "StackingEnsemble",
     "TrialResult",
+    "VotingEnsemble",
 ]
