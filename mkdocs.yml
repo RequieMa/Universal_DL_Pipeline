@@ -54,6 +54,7 @@ nav:
       - Architecture Spec: superpowers/specs/2026-07-28-pipeline-architecture-design.md
       - Phase 1 Framework: superpowers/specs/2026-07-29-phase-1-framework-design.md
       - Phase 2 Table Adapters: superpowers/specs/2026-07-30-phase-2-table-adapters-design.md
+      - Phase 3 Image + Torch: superpowers/specs/2026-08-08-phase3-image-torch-design.md
 
 markdown_extensions:
   - pymdownx.highlight:
