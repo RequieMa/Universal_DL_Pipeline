@@ -162,8 +162,8 @@ class TestTorchPipelineE2E:
         pipeline = InferPipeline(config)
         state = pipeline.run("infer")
 
-        # Infer mode: model is None (build_model not called), history is None
-        assert state.model is None
+        # Infer mode: build_model & load_checkpoint run (model is built); history is None
+        assert state.model is not None
         assert state.history is None
         assert state.predictions is not None
 
