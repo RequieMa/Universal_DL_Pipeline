@@ -203,3 +203,115 @@ class TestTorchModelMode:
         # BatchNorm uses population stats in eval, batch stats in train
         # Output should differ (unless weights happen to be identical)
         assert not torch.allclose(out_train, out_eval)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TorchLoss tests
+# ═══════════════════════════════════════════════════════════════════════════
+
+@requires_torch
+class TestTorchLoss:
+    """Tests for TorchLoss."""
+
+    def test_cross_entropy_loss_value_is_float(self) -> None:
+        """forward() returns a Loss with a float value."""
+        from pipeline.adapters.torch_adapter import TorchLoss
+        from pipeline.protocols import Loss
+
+        loss_fn = TorchLoss("CrossEntropyLoss")
+        preds = torch.randn(3, 5)
+        targets = torch.tensor([1, 2, 0], dtype=torch.long)
+        result = loss_fn(preds, targets)
+        assert isinstance(result, Loss)
+        assert isinstance(float(result), float)
+        assert float(result) > 0
+
+    def test_mse_loss_value_is_float(self) -> None:
+        """MSELoss forward returns a Loss with a float value."""
+        from pipeline.adapters.torch_adapter import TorchLoss
+
+        loss_fn = TorchLoss("MSELoss")
+        preds = torch.randn(4, 1)
+        targets = torch.randn(4, 1)
+        result = loss_fn(preds, targets)
+        assert isinstance(float(result), float)
+        assert float(result) >= 0
+
+    def test_backward_populates_grad(self) -> None:
+        """Loss.backward() computes gradients on the underlying tensors."""
+        from pipeline.adapters.torch_adapter import TorchLoss
+
+        # Use a simple module so we can check grad after backward
+        module = torch.nn.Linear(3, 2)
+        loss_fn = TorchLoss("MSELoss")
+
+        x = torch.randn(4, 3, requires_grad=False)
+        preds = module(x)
+        targets = torch.randn(4, 2)
+
+        result = loss_fn(preds, targets)
+        # Before backward, grads should be None or zero
+        assert module.weight.grad is None
+
+        result.backward()
+        # After backward, grads should be populated
+        assert module.weight.grad is not None
+        assert not torch.allclose(module.weight.grad, torch.zeros_like(module.weight.grad))
+
+    def test_backward_returns_none_grad_for_untouched_params(self) -> None:
+        """Parameters not in computation graph stay None after backward."""
+        from pipeline.adapters.torch_adapter import TorchLoss
+
+        module = torch.nn.Linear(4, 2)
+        loss_fn = TorchLoss("MSELoss")
+
+        # Freeze weight — only bias should get grad
+        module.weight.requires_grad_(False)
+        x = torch.randn(3, 4)
+        preds = module(x)
+        targets = torch.randn(3, 2)
+
+        result = loss_fn(preds, targets)
+        result.backward()
+
+        assert module.weight.grad is None  # frozen
+        assert module.bias.grad is not None
+
+    def test_numpy_input_auto_conversion(self) -> None:
+        """TorchLoss accepts numpy arrays and returns correct Loss."""
+        from pipeline.adapters.torch_adapter import TorchLoss
+
+        loss_fn = TorchLoss("MSELoss")
+        preds = np.random.randn(4, 2).astype(np.float32)
+        targets = np.random.randn(4, 2).astype(np.float32)
+        result = loss_fn(preds, targets)
+        assert isinstance(float(result), float)
+
+    def test_invalid_loss_name_raises_attribute_error(self) -> None:
+        """Unknown loss name raises AttributeError from getattr."""
+        from pipeline.adapters.torch_adapter import TorchLoss
+
+        with pytest.raises(AttributeError):
+            TorchLoss("NonExistentLoss12345")
+
+    def test_kwargs_forwarded_to_loss_constructor(self) -> None:
+        """Extra kwargs are passed to the torch loss constructor."""
+        from pipeline.adapters.torch_adapter import TorchLoss
+
+        # CrossEntropyLoss with label_smoothing
+        loss_fn = TorchLoss("CrossEntropyLoss", label_smoothing=0.1)
+        preds = torch.randn(3, 5)
+        targets = torch.tensor([1, 2, 0])
+        result = loss_fn(preds, targets)
+        assert float(result) > 0
+
+    def test_loss_call_delegates_to_forward(self) -> None:
+        """__call__ returns same as forward()."""
+        from pipeline.adapters.torch_adapter import TorchLoss
+
+        loss_fn = TorchLoss("MSELoss")
+        preds = torch.randn(3, 2)
+        targets = torch.randn(3, 2)
+        result_call = loss_fn(preds, targets)
+        result_fwd = loss_fn.forward(preds, targets)
+        assert float(result_call) == float(result_fwd)

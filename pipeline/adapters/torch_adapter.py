@@ -12,6 +12,8 @@ from typing import Any
 
 from pipeline.protocols import (
     ArrayLike,
+    Loss,
+    LossProtocol,
     ModelProtocol,
     Parameter,
 )
@@ -91,3 +93,59 @@ class TorchModel(ModelProtocol):
     def eval_mode(self) -> None:
         """Switch module to evaluation mode (``module.eval()``)."""
         self._module.eval()
+
+
+class TorchLoss(LossProtocol):
+    """Config-driven wrapper for ``torch.nn.*`` loss functions.
+
+    Selects a torch loss class by name and forwards constructor kwargs.
+    ``forward()`` wraps the torch loss tensor in a :class:`Loss` with a
+    ``_backward_fn`` that calls ``result.backward()`` on the autograd
+    graph.
+
+    Usage::
+
+        loss_fn = TorchLoss("CrossEntropyLoss", label_smoothing=0.1)
+        loss = loss_fn(predictions, targets)
+        loss.backward()  # calls tensor.backward() on the autograd graph
+
+    Args:
+        loss_name: Name of a ``torch.nn`` loss class
+            (e.g., ``"CrossEntropyLoss"``, ``"MSELoss"``, ``"BCELoss"``).
+        **kwargs: Forwarded to the torch loss constructor.
+    """
+
+    def __init__(self, loss_name: str, **kwargs: Any) -> None:
+        """Create a TorchLoss by name.
+
+        Args:
+            loss_name: ``torch.nn`` class name.
+            **kwargs: Arguments forwarded to the loss constructor.
+
+        Raises:
+            AttributeError: If ``loss_name`` is not found in ``torch.nn``.
+        """
+        import torch.nn as nn
+
+        loss_cls = getattr(nn, loss_name)
+        self._loss = loss_cls(**kwargs)
+
+    def forward(self, predictions: ArrayLike, targets: ArrayLike) -> Loss:
+        """Compute loss.
+
+        Converts numpy inputs to tensors via :func:`torch.as_tensor`
+        (zero-copy when already tensors).
+
+        Args:
+            predictions: Model output.
+            targets: Ground truth labels.
+
+        Returns:
+            :class:`Loss` with scalar value and ``_backward_fn``.
+        """
+        import torch
+
+        p = torch.as_tensor(predictions)
+        t = torch.as_tensor(targets)
+        result = self._loss(p, t)
+        return Loss(value=float(result.detach().cpu()), _backward_fn=result.backward)
