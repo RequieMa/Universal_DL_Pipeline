@@ -67,10 +67,23 @@ class TorchModel(ModelProtocol):
         import torch  # type: ignore[import-not-found]
 
         is_torch = isinstance(inputs, torch.Tensor)
+        self._last_input = inputs
         x = inputs if is_torch else torch.as_tensor(inputs)
+        # Match the module's weight dtype (e.g. float32 nn.Linear vs float64
+        # numpy CSV data) so the matmul doesn't error on a dtype mismatch.
+        if not is_torch:
+            try:
+                param_dtype = next(self._module.parameters()).dtype
+            except StopIteration:
+                param_dtype = x.dtype
+            if x.dtype != param_dtype:
+                x = x.to(dtype=param_dtype)
         output = self._module(x)
         if is_torch:
             return output
+        # Detach so the numpy input→numpy output contract holds. For torch
+        # training, TorchLoss re-runs the module on ``_last_input`` to
+        # rebuild the autograd graph during backward().
         return output.detach().cpu().numpy()
 
     def parameters(self) -> Iterable[Parameter]:
@@ -113,14 +126,25 @@ class TorchLoss(LossProtocol):
     Args:
         loss_name: Name of a ``torch.nn`` loss class
             (e.g., ``"CrossEntropyLoss"``, ``"MSELoss"``, ``"BCELoss"``).
+        model: Optional :class:`TorchModel`. When provided, ``backward()``
+            re-runs the module's forward on the cached inputs to rebuild the
+            autograd graph and call ``tensor.backward()`` — needed because
+            ``TorchModel.forward`` returns a detached numpy array for numpy
+            input, which would otherwise sever the graph and make training
+            impossible. When ``None``, ``backward()`` uses the graph built
+            at ``forward()`` time (torch-tensor inputs).
         **kwargs: Forwarded to the torch loss constructor.
     """
 
-    def __init__(self, loss_name: str, **kwargs: Any) -> None:
+    def __init__(
+        self, loss_name: str, model: TorchModel | None = None, **kwargs: Any
+    ) -> None:
         """Create a TorchLoss by name.
 
         Args:
             loss_name: ``torch.nn`` class name.
+            model: Optional :class:`TorchModel` to rebuild the graph through
+                during ``backward()`` (see class docstring).
             **kwargs: Arguments forwarded to the loss constructor.
 
         Raises:
@@ -128,6 +152,7 @@ class TorchLoss(LossProtocol):
         """
         import torch.nn as nn
 
+        self._model = model
         loss_cls = getattr(nn, loss_name)
         self._loss = loss_cls(**kwargs)
 
@@ -148,6 +173,34 @@ class TorchLoss(LossProtocol):
 
         p = torch.as_tensor(predictions)
         t = torch.as_tensor(targets)
+
+        if self._model is not None:
+            model = self._model
+            loss_fn = self._loss
+
+            def _backward() -> None:
+                # Rebuild the graph: the numpy input→numpy output forward
+                # detaches, so recompute through the module on the model's
+                # cached input, then backprop to populate param gradients.
+                raw_x = getattr(model, "_last_input", predictions)
+                x = (
+                    raw_x
+                    if isinstance(raw_x, torch.Tensor)
+                    else torch.as_tensor(raw_x)
+                )
+                param_dtype = next(model._module.parameters()).dtype
+                if x.dtype != param_dtype:
+                    x = x.to(dtype=param_dtype)
+                re_pred = model._module(x)
+                target_t = (
+                    t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
+                )
+                result = loss_fn(re_pred, target_t)
+                result.backward()
+
+            result = self._loss(p, t)
+            return Loss(value=float(result.detach().cpu()), _backward_fn=_backward)
+
         result = self._loss(p, t)
         return Loss(value=float(result.detach().cpu()), _backward_fn=result.backward)
 
