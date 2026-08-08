@@ -175,7 +175,7 @@ def _make_torch_pipeline(csv_path: str):
     """Build a pipeline with TorchModel on tabular data."""
     import torch.nn as nn
 
-    from pipeline.adapters.torch_adapter import TorchModel, TorchLoss, TorchOptimizer
+    from pipeline.adapters.torch_adapter import TorchLoss, TorchModel, TorchOptimizer
     from pipeline.config import Config
     from pipeline.data.csv_source import CsvDataSource
     from pipeline.data.split import train_test_split

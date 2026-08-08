@@ -150,7 +150,7 @@ class TorchLoss(LossProtocol):
         Raises:
             AttributeError: If ``loss_name`` is not found in ``torch.nn``.
         """
-        import torch.nn as nn
+        import torch.nn as nn  # type: ignore[import-not-found]
 
         self._model = model
         loss_cls = getattr(nn, loss_name)
@@ -169,7 +169,7 @@ class TorchLoss(LossProtocol):
         Returns:
             :class:`Loss` with scalar value and ``_backward_fn``.
         """
-        import torch
+        import torch  # type: ignore[import-not-found]
 
         p = torch.as_tensor(predictions)
         t = torch.as_tensor(targets)
@@ -245,8 +245,8 @@ class TorchOptimizer(OptimizerProtocol):
         Raises:
             AttributeError: If ``optimizer_name`` is not found in ``torch.optim``.
         """
-        import torch
-        import torch.optim as optim
+        import torch  # type: ignore[import-not-found]
+        import torch.optim as optim  # type: ignore[import-not-found]
 
         opt_cls = getattr(optim, optimizer_name)
         self._params = [p for p in parameters if isinstance(p.data, torch.Tensor)]
@@ -271,7 +271,7 @@ class TorchOptimizer(OptimizerProtocol):
         core :class:`Parameter` contract, where ``grad`` is a live, inspectable
         value.
         """
-        import torch
+        import torch  # type: ignore[import-not-found]
 
         self._opt.zero_grad(set_to_none=False)
         for p in self._params:

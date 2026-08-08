@@ -43,6 +43,9 @@ dev = [
     "mypy>=1.10.0",
     "pandas-stubs>=3.0.0",
     "types-tqdm>=4.70.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "pillow>=10.0.0",
 ]
 docs = [
     "mkdocs-material>=9.5.0",

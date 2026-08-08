@@ -181,13 +181,12 @@ class TestImageFolderToTorchE2E:
         not visible from tests/integration/).
         """
         import torch.nn as nn
+        from PIL import Image
 
         from pipeline.adapters.torch_adapter import TorchLoss, TorchModel, TorchOptimizer
         from pipeline.data.image_folder import ImageFolderDataSource
         from pipeline.data.transforms import TransformedDataStream
         from pipeline.protocols import Batch
-
-        from PIL import Image
 
         # Create 2 classes x 3 images of 4x4 RGB in tmp_path
         for class_name in ["cat", "dog"]:
@@ -204,7 +203,7 @@ class TestImageFolderToTorchE2E:
         # Build torch transform: PIL images -> normalized float tensors
         def to_tensor(batch: Batch) -> Batch:
             import torch
-            from torchvision import transforms as T
+            import torchvision.transforms as T  # noqa: N812
 
             to_tensor_fn = T.Compose(
                 [
@@ -242,4 +241,4 @@ class TestImageFolderToTorchE2E:
             losses.append(float(loss))
 
         assert len(losses) > 0  # at least one batch processed
-        assert all(isinstance(l, float) for l in losses)
+        assert all(isinstance(loss_val, float) for loss_val in losses)
