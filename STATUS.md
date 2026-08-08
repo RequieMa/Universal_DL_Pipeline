@@ -3,7 +3,7 @@
 
 ## Where we are
 
-Phase 5 (HPO + Ensemble) **complete**. Phase 4 (Checkpoint + Inference) **complete**. Phase 2 (Table Adapters) **complete**.
+Phase 6 (Text + NLP) **complete**. Phase 5 (HPO + Ensemble) **complete**. Phase 2 (Table Adapters) **complete**.
 331 tests passing, 5 skipped (sklearn on system python). Pipeline `v0.2.0` — sklearn,
 numpy, and torch adapters ready, M1/M2/M3/M4 example notebooks written.
 
@@ -125,6 +125,10 @@ examples/
 - [x] VotingEnsemble (hard/soft) + StackingEnsemble (meta-model)
 - [x] 35 new tests (18 search + 14 ensemble + 3 integration)
 - [x] Zero new framework dependencies — pure Python + numpy
+- [x] TextDataSource (CSV text→Batch) matching CsvDataSource pattern
+- [x] SimpleTokenizer (fit/encode/decode, PAD/UNK, min_freq, max_vocab)
+- [x] M5 IMDB sentiment notebook (LSTM, 80.7% accuracy)
+- [x] 24 new tests (12 text_source + 12 tokenizer)
 
 ## Phase roadmap
 
@@ -136,11 +140,12 @@ Phase 2  ✅ DONE — Table adapters: sklearn + numpy → M1/M2/M3
                   (SklearnModel, NumpyModel, SGD, Adam, MSELoss, CrossEntropyLoss,
                    NumpyOptimizer, StubLoss/Optimizer, collect_arrays, contract tests)
 Phase 3  ✅ DONE — Image + TorchAdapter → M4
+Phase 6  ✅ DONE — Text + NLP → M5 (TextDataSource, SimpleTokenizer, IMDB LSTM)
 Phase 5  ✅ DONE — HPO + Ensemble (GridSearch, RandomSearch, VotingEnsemble,
                   StackingEnsemble, SearchResult, BaseSearch)
 Phase 4  ✅ DONE — Checkpoint + Inference (TorchCheckpoint, CheckpointHook, EarlyStopHook,
                   load_checkpoint stage, default export)
 Phase 5         — HPO + Ensemble
-Phase 6         — Sequences / NLP → M5
+Phase 6  ✅ DONE — Text + NLP → M5 (TextDataSource, SimpleTokenizer, IMDB LSTM notebook)
 M6/M7           — LLM, add-only (no API changes)
 ```

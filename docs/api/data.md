@@ -28,6 +28,13 @@
       members:
         - TransformedDataStream
 
+## TextDataSource
+
+::: pipeline.data.text_source
+    options:
+      members:
+        - TextDataSource
+
 ## collect_arrays
 
 ::: pipeline.data.utils
