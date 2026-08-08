@@ -55,6 +55,7 @@ nav:
       - Phase 1 Framework: superpowers/specs/2026-07-29-phase-1-framework-design.md
       - Phase 2 Table Adapters: superpowers/specs/2026-07-30-phase-2-table-adapters-design.md
       - Phase 3 Image + Torch: superpowers/specs/2026-08-08-phase3-image-torch-design.md
+      - Phase 4 Checkpoint + Inference: superpowers/specs/2026-08-08-phase4-checkpoint-inference-design.md
 
 markdown_extensions:
   - pymdownx.highlight:
