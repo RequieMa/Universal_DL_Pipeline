@@ -1,8 +1,9 @@
 # Project Status — 2026-08-08
 
+
 ## Where we are
 
-Phase 3 (Image + TorchAdapter) **complete**. Phase 2 (Table Adapters) **complete**.
+Phase 4 (Checkpoint + Inference) **complete**. Phase 3 (Image + TorchAdapter) **complete**. Phase 2 (Table Adapters) **complete**.
 331 tests passing, 5 skipped (sklearn on system python). Pipeline `v0.2.0` — sklearn,
 numpy, and torch adapters ready, M1/M2/M3/M4 example notebooks written.
 
@@ -113,6 +114,13 @@ examples/
 - [x] Core works without torch: `python -c "from pipeline.data.image_folder import ImageFolderDataSource"`
 - [x] MNIST notebook executes (>95%) | CIFAR-10 notebook executes (>70%)
 - [x] TDD coverage for all new Phase 3 modules
+- [x] TorchCheckpoint save/load with model+optimizer+epoch+history
+- [x] BasePipeline default export() writes predictions CSV
+- [x] load_checkpoint stage added to infer mode flow
+- [x] CheckpointHook saves latest.pt and best.pt per epoch
+- [x] EarlyStopHook stops training when metric plateaus
+- [x] 26 new tests (9 unit checkpoint + 7 early_stop + 4 checkpoint hook + 3 contract + 3 integration)
+- [x] ruff clean, backward compatible (existing subclasses unchanged)
 
 ## Phase roadmap
 
@@ -124,7 +132,8 @@ Phase 2  ✅ DONE — Table adapters: sklearn + numpy → M1/M2/M3
                   (SklearnModel, NumpyModel, SGD, Adam, MSELoss, CrossEntropyLoss,
                    NumpyOptimizer, StubLoss/Optimizer, collect_arrays, contract tests)
 Phase 3  ✅ DONE — Image + TorchAdapter → M4
-Phase 4         — Export + Inference (production-grade)
+Phase 4  ✅ DONE — Checkpoint + Inference (TorchCheckpoint, CheckpointHook, EarlyStopHook,
+                  load_checkpoint stage, default export)
 Phase 5         — HPO + Ensemble
 Phase 6         — Sequences / NLP → M5
 M6/M7           — LLM, add-only (no API changes)
