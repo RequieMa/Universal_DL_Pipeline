@@ -3,7 +3,7 @@
 
 ## Where we are
 
-Phase 4 (Checkpoint + Inference) **complete**. Phase 3 (Image + TorchAdapter) **complete**. Phase 2 (Table Adapters) **complete**.
+Phase 5 (HPO + Ensemble) **complete**. Phase 4 (Checkpoint + Inference) **complete**. Phase 2 (Table Adapters) **complete**.
 331 tests passing, 5 skipped (sklearn on system python). Pipeline `v0.2.0` — sklearn,
 numpy, and torch adapters ready, M1/M2/M3/M4 example notebooks written.
 
@@ -121,6 +121,10 @@ examples/
 - [x] EarlyStopHook stops training when metric plateaus
 - [x] 26 new tests (9 unit checkpoint + 7 early_stop + 4 checkpoint hook + 3 contract + 3 integration)
 - [x] ruff clean, backward compatible (existing subclasses unchanged)
+- [x] GridSearch (Cartesian product) + RandomSearch (sampling without replacement)
+- [x] VotingEnsemble (hard/soft) + StackingEnsemble (meta-model)
+- [x] 35 new tests (18 search + 14 ensemble + 3 integration)
+- [x] Zero new framework dependencies — pure Python + numpy
 
 ## Phase roadmap
 
@@ -132,6 +136,8 @@ Phase 2  ✅ DONE — Table adapters: sklearn + numpy → M1/M2/M3
                   (SklearnModel, NumpyModel, SGD, Adam, MSELoss, CrossEntropyLoss,
                    NumpyOptimizer, StubLoss/Optimizer, collect_arrays, contract tests)
 Phase 3  ✅ DONE — Image + TorchAdapter → M4
+Phase 5  ✅ DONE — HPO + Ensemble (GridSearch, RandomSearch, VotingEnsemble,
+                  StackingEnsemble, SearchResult, BaseSearch)
 Phase 4  ✅ DONE — Checkpoint + Inference (TorchCheckpoint, CheckpointHook, EarlyStopHook,
                   load_checkpoint stage, default export)
 Phase 5         — HPO + Ensemble
