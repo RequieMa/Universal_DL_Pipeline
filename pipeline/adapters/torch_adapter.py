@@ -15,6 +15,7 @@ from pipeline.protocols import (
     Loss,
     LossProtocol,
     ModelProtocol,
+    OptimizerProtocol,
     Parameter,
 )
 
@@ -149,3 +150,79 @@ class TorchLoss(LossProtocol):
         t = torch.as_tensor(targets)
         result = self._loss(p, t)
         return Loss(value=float(result.detach().cpu()), _backward_fn=result.backward)
+
+
+class TorchOptimizer(OptimizerProtocol):
+    """Config-driven wrapper for ``torch.optim.*`` optimizers.
+
+    Selects a torch optimizer class by name, forwards constructor kwargs,
+    and delegates ``step()`` / ``zero_grad()``. Only :class:`Parameter`
+    instances whose ``data`` is a ``torch.Tensor`` are passed to the
+    underlying optimizer — non-tensor parameters (e.g., numpy arrays) are
+    silently skipped.
+
+    Usage::
+
+        opt = TorchOptimizer(model.parameters(), "Adam", lr=0.001)
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+
+    Args:
+        parameters: Iterable of :class:`Parameter` objects (live refs).
+        optimizer_name: Name of a ``torch.optim`` class
+            (e.g., ``"SGD"``, ``"Adam"``, ``"AdamW"``).
+        **kwargs: Forwarded to the torch optimizer constructor.
+    """
+
+    def __init__(
+        self,
+        parameters: Iterable[Parameter],
+        optimizer_name: str,
+        **kwargs: Any,
+    ) -> None:
+        """Create a TorchOptimizer by name.
+
+        Args:
+            parameters: Live Parameter references (from ``model.parameters()``).
+            optimizer_name: ``torch.optim`` class name.
+            **kwargs: Arguments forwarded to the optimizer constructor
+                (lr, momentum, weight_decay, etc.).
+
+        Raises:
+            AttributeError: If ``optimizer_name`` is not found in ``torch.optim``.
+        """
+        import torch
+        import torch.optim as optim
+
+        opt_cls = getattr(optim, optimizer_name)
+        self._params = [p for p in parameters if isinstance(p.data, torch.Tensor)]
+        self._opt = opt_cls([p.data for p in self._params], **kwargs)
+
+    def step(self) -> None:
+        """Update parameters using accumulated gradients.
+
+        Delegates to ``self._opt.step()``.
+        """
+        self._opt.step()
+
+    def zero_grad(self) -> None:
+        """Reset all gradients to zero.
+
+        Zeros the underlying data tensors in-place (via
+        ``zero_grad(set_to_none=False)``) so gradients remain ``None``-free
+        for inspection, and also zeros any :class:`Parameter` ``grad`` fields
+        that hold their own tensor. Non-tensor parameters are skipped.
+
+        Keeping gradients as zero tensors (rather than ``None``) matches the
+        core :class:`Parameter` contract, where ``grad`` is a live, inspectable
+        value.
+        """
+        import torch
+
+        self._opt.zero_grad(set_to_none=False)
+        for p in self._params:
+            grad = p.grad
+            if isinstance(grad, torch.Tensor):
+                with torch.no_grad():
+                    grad.zero_()
