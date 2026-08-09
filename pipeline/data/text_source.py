@@ -143,4 +143,4 @@ class TextDataSource(DataStream):
     def __len__(self) -> int:
         """Number of batches (``ceil(n_samples / batch_size)``)."""
         self._load()
-        return max(1, math.ceil(self._n_samples / self.batch_size))
+        return math.ceil(self._n_samples / self.batch_size)

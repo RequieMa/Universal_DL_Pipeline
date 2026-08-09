@@ -56,6 +56,12 @@ docs = [
     "mkdocstrings[python]>=0.25.0",
     "mkdocs-static-i18n>=1.2.0",
 ]
+# LLM extras for the m6 distilgpt2 example and serve.py. Not part of core
+# or dev: the pipeline imports without them (lazy import invariant).
+llm = [
+    "transformers>=4.40.0",
+    "peft>=0.10.0",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["pipeline"]

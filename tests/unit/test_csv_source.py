@@ -131,3 +131,16 @@ class TestCsvDataSourceEdgeCases:
         list(source)  # first pass
         batches = list(source)  # second pass
         assert len(batches) == 1
+
+    def test_empty_csv_len_matches_iter(self, tmp_path):
+        """Empty: len() reports 0 batches, agreeing with __iter__."""
+        import pandas as pd
+
+        df = pd.DataFrame({"a": [], "b": [], "label": []})
+        path = tmp_path / "empty.csv"
+        df.to_csv(path, index=False)
+        source = CsvDataSource(str(path), batch_size=4)
+        # __len__ must equal the actual number of batches yielded (0, not 1).
+        assert len(source) == 0
+        assert list(source) == []
+        assert len(source) == len(list(source))

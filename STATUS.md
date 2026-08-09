@@ -1,11 +1,28 @@
-# Project Status — 2026-08-08
+# Project Status — 2026-08-09
 
 
 ## Where we are
 
 M6/M7 (LLM Fine-Tune + Serve) **complete**. Phase 6 (Text + NLP) **complete**. Phase 2 (Table Adapters) **complete**.
-331 tests passing, 5 skipped (sklearn on system python). Pipeline `v0.2.0` — sklearn,
-numpy, and torch adapters ready, M1/M2/M3/M4 example notebooks written.
+**400 tests passing, 54 skipped** (torch-gated). Pipeline `v0.2.0` — sklearn, numpy, and torch adapters ready.
+
+### 2026-08-09 — Codebase remediation (10/10 tasks complete)
+
+Correctness, robustness, and pedagogy sweep. No new features — all fixes are backward-compatible.
+
+| Task | Fix | Status |
+|------|-----|--------|
+| C1 Adam bias correction | Per-param `_t` dict (was shared scalar) | ✅ done |
+| I5 Metrics validation | `average` must be "binary"/"macro"; raises on invalid | ✅ done |
+| I7 OptunaSearch int ranges | Tuple dispatch: int→`suggest_int`, float→`suggest_float` | ✅ done |
+| Correctness minors | `__len__` returns 0 for empty source; image glob dedupe; assert→ValueError | ✅ done |
+| I6+I9 Ensemble robustness | VotingEnsemble handles 1D labels; StackingEnsemble raises if untrained | ✅ done |
+| I3+I4 Hook aggregation | Epoch-mean not last-batch; missing-key warns once; flaky test fixed | ✅ done |
+| I1 Protocol docs + llm extra | `forward()` classifier convention documented; `[llm]` extra in pyproject | ✅ done |
+| Notebook bug fixes | m2/m3 `bce_losses`/`mse_losses` rename; m6 dead SimpleTokenizer + honest framing | ✅ done |
+| Notebook reproducibility | m4a/m4b/m5: `set_seed` in `build_model`, model constructed inside stage | ✅ done |
+| I2+I8 Torch adapter | Device bridging + checkpoint load raises + dead zero_grad loop | ✅ done |
+
 
 ## What was built (Phase 1 + 2)
 

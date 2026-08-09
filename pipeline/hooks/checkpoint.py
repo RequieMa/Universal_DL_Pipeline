@@ -7,6 +7,7 @@ keeping only the best-scoring checkpoint.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -14,6 +15,8 @@ from pipeline.hooks.base import BaseHook
 
 if TYPE_CHECKING:
     from pipeline.pipeline import PipelineState
+
+_logger = logging.getLogger(__name__)
 
 
 class CheckpointHook(BaseHook):
@@ -52,12 +55,20 @@ class CheckpointHook(BaseHook):
         self.monitor = monitor
         self.mode = mode
         self._best_score: float | None = None
+        self._consumed = 0
+        self._warned_missing = False
 
     def on_epoch_end(self, epoch: int, state: PipelineState) -> None:
         """Save checkpoints at the end of an epoch.
 
         This is a no-op when ``state.model`` is None, ``state.history`` is
         None, or no checkpoint directory can be resolved from the state.
+
+        The monitored metric is the mean over the batches added since the
+        previous epoch (``state.history[monitor]`` is a flat, per-batch
+        list), so best-tracking compares epoch means rather than the noisy
+        final batch. In ``save_best_only`` mode the checkpoint is written
+        only when that epoch metric strictly improves.
 
         Args:
             epoch: Zero-based epoch index.
@@ -72,12 +83,23 @@ class CheckpointHook(BaseHook):
 
         from pipeline.export.checkpoint import TorchCheckpoint
 
-        # Always write the latest checkpoint (unless best-only).
+        # Always write the latest checkpoint (unless best-only); this is
+        # independent of the monitored metric.
         if not self.save_best_only:
             TorchCheckpoint.save(state, checkpoint_dir / "latest.pt")
 
-        if self._is_best(state):
-            self._best_score = self._current_score(state)
+        # Best-tracking needs the monitored metric. If it's absent, warn
+        # once and skip best-tracking (never crash the loop).
+        if self.monitor not in state.history:
+            self._warn_missing(state)
+            return
+
+        score = self._epoch_metric(state)
+        if score is None:
+            return
+
+        if self._is_best(score):
+            self._best_score = score
             TorchCheckpoint.save(state, checkpoint_dir / "best.pt")
 
     def _resolve_checkpoint_dir(self, state: PipelineState) -> Path | None:
@@ -98,35 +120,63 @@ class CheckpointHook(BaseHook):
             return Path(cfg.output_dir) / "checkpoints"
         return None
 
-    def _current_score(self, state: PipelineState) -> float:
-        """Read the current monitored score from history.
+    def _epoch_metric(self, state: PipelineState) -> float | None:
+        """Return the mean of the monitored series over the current epoch.
+
+        ``state.history[monitor]`` is a flat, per-batch list. Each call
+        averages only the entries appended since the previous epoch and
+        advances an internal cursor. When no new entries were added (e.g.
+        the hook is driven over a pre-filled history) it falls back to the
+        mean of the whole series, so a one-value-per-epoch metric still maps
+        to that single value.
+
+        The caller guarantees ``self.monitor`` is present in
+        ``state.history`` before this runs.
 
         Args:
             state: Current pipeline state.
 
         Returns:
-            The latest value of ``state.history[self.monitor]``.
+            The epoch mean, or None when the series is empty or not a list.
         """
-        metrics = state.history[self.monitor] if state.history else None
-        if metrics is None:
-            return float("inf")
-        if isinstance(metrics, list):
-            return float(metrics[-1]) if metrics else float("inf")
-        return float(metrics)
+        series = state.history[self.monitor] if state.history else None
+        if not isinstance(series, list) or not series:
+            return None
 
-    def _is_best(self, state: PipelineState) -> bool:
-        """Return True when the current score is the best seen so far.
+        new = series[self._consumed :]
+        self._consumed = len(series)
+        window = new if new else series
+        return sum(float(v) for v in window) / len(window)
+
+    def _warn_missing(self, state: PipelineState) -> None:
+        """Log a single warning naming the missing monitored key.
 
         Args:
             state: Current pipeline state.
+        """
+        if self._warned_missing:
+            return
+        self._warned_missing = True
+        available = sorted(state.history) if state.history else []
+        _logger.warning(
+            "CheckpointHook: monitored key %r not found in state.history; "
+            "available keys: %s. Best-checkpoint tracking is disabled.",
+            self.monitor,
+            available,
+        )
+
+    def _is_best(self, score: float) -> bool:
+        """Return True when ``score`` is the best seen so far.
+
+        Args:
+            score: The current epoch metric.
 
         Returns:
-            True on the first epoch or when the current score improves on
-            the stored best score per ``self.mode``.
+            True on the first epoch or when the score improves on the
+            stored best score per ``self.mode``.
         """
         if self._best_score is None:
             return True
-        score = self._current_score(state)
         if self.mode == "max":
             return score > self._best_score
         return score < self._best_score

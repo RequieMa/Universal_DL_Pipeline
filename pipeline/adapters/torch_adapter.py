@@ -52,6 +52,15 @@ class TorchModel(ModelProtocol):
     # ModelProtocol
     # ------------------------------------------------------------------
 
+    def _device(self) -> Any:
+        """Return the device the module's first parameter lives on, or CPU."""
+        import torch  # type: ignore[import-not-found]
+
+        try:
+            return next(self._module.parameters()).device
+        except StopIteration:
+            return torch.device("cpu")
+
     def forward(self, inputs: ArrayLike) -> ArrayLike:
         """Run a forward pass.
 
@@ -62,13 +71,17 @@ class TorchModel(ModelProtocol):
             inputs: Input tensor/array.
 
         Returns:
-            Model output in the same format as the input.
+            Model output in the same format as the input. For a classifier
+            these are raw logits ``(batch_size, n_classes)`` — argmax over
+            the last axis for labels (argmax-equivalent to the normalized
+            probabilities :class:`SklearnModel` returns).
         """
         import torch  # type: ignore[import-not-found]
 
         is_torch = isinstance(inputs, torch.Tensor)
         self._last_input = inputs
         x = inputs if is_torch else torch.as_tensor(inputs)
+        device = self._device()
         # Match the module's weight dtype (e.g. float32 nn.Linear vs float64
         # numpy CSV data) so the matmul doesn't error on a dtype mismatch.
         if not is_torch:
@@ -78,6 +91,7 @@ class TorchModel(ModelProtocol):
                 param_dtype = x.dtype
             if x.dtype != param_dtype:
                 x = x.to(dtype=param_dtype)
+        x = x.to(device)
         output = self._module(x)
         if is_torch:
             return output
@@ -191,6 +205,7 @@ class TorchLoss(LossProtocol):
                 param_dtype = next(model._module.parameters()).dtype
                 if x.dtype != param_dtype:
                     x = x.to(dtype=param_dtype)
+                x = x.to(model._device())
                 re_pred = model._module(x)
                 target_t = (
                     t if isinstance(t, torch.Tensor) else torch.as_tensor(t)
@@ -262,20 +277,13 @@ class TorchOptimizer(OptimizerProtocol):
     def zero_grad(self) -> None:
         """Reset all gradients to zero.
 
-        Zeros the underlying data tensors in-place (via
-        ``zero_grad(set_to_none=False)``) so gradients remain ``None``-free
-        for inspection, and also zeros any :class:`Parameter` ``grad`` fields
-        that hold their own tensor. Non-tensor parameters are skipped.
-
-        Keeping gradients as zero tensors (rather than ``None``) matches the
-        core :class:`Parameter` contract, where ``grad`` is a live, inspectable
-        value.
+        Delegates to ``self._opt.zero_grad(set_to_none=False)`` so gradients
+        remain inspectable zero tensors rather than ``None``, then zeros the
+        ``.grad`` field on each :class:`Parameter` object as well so callers
+        see the zeroed value regardless of whether the ``nn.Parameter`` had a
+        ``.grad`` to begin with.
         """
-        import torch  # type: ignore[import-not-found]
-
         self._opt.zero_grad(set_to_none=False)
-        for p in self._params:
-            grad = p.grad
-            if isinstance(grad, torch.Tensor):
-                with torch.no_grad():
-                    grad.zero_()
+        for param in self._params:
+            if param.grad is not None:
+                param.grad.zero_()

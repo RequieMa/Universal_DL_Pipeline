@@ -40,17 +40,32 @@ def precision(
         y_true: Ground-truth labels.
         y_pred: Predicted labels.
         average: ``"binary"`` or ``"macro"``. Macro averages per-class precision.
+            Raises ``ValueError`` for any other value, and for ``"binary"`` when
+            the data has more than 2 classes (use ``"macro"`` for multiclass).
         pos_label: Positive class label for binary mode. When ``None`` (default)
             and ``average="binary"``, auto-detects from the unique sorted labels
             using ``classes[-1]``.
 
     Returns:
         Precision in ``[0.0, 1.0]``.
+
+    Raises:
+        ValueError: If ``average`` is not ``"binary"`` or ``"macro"``, or if
+            ``average="binary"`` is used with more than 2 classes.
     """
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
     classes = np.unique(np.concatenate([y_true, y_pred]))
-    if average == "binary" and len(classes) <= 2:
+    if average not in {"binary", "macro"}:
+        raise ValueError(
+            f"Unsupported average={average!r}; expected 'binary' or 'macro'."
+        )
+    if average == "binary" and len(classes) > 2:
+        raise ValueError(
+            f"average='binary' requires <=2 classes, got {len(classes)}. "
+            "Use average='macro' for multiclass."
+        )
+    if average == "binary":
         if pos_label is None:
             pos_label = classes[-1]
         tp = np.sum((y_pred == pos_label) & (y_true == pos_label))
@@ -77,17 +92,32 @@ def recall(
         y_true: Ground-truth labels.
         y_pred: Predicted labels.
         average: ``"binary"`` or ``"macro"``. Macro averages per-class recall.
+            Raises ``ValueError`` for any other value, and for ``"binary"`` when
+            the data has more than 2 classes (use ``"macro"`` for multiclass).
         pos_label: Positive class label for binary mode. When ``None`` (default)
             and ``average="binary"``, auto-detects from the unique sorted labels
             using ``classes[-1]``.
 
     Returns:
         Recall in ``[0.0, 1.0]``.
+
+    Raises:
+        ValueError: If ``average`` is not ``"binary"`` or ``"macro"``, or if
+            ``average="binary"`` is used with more than 2 classes.
     """
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
     classes = np.unique(np.concatenate([y_true, y_pred]))
-    if average == "binary" and len(classes) <= 2:
+    if average not in {"binary", "macro"}:
+        raise ValueError(
+            f"Unsupported average={average!r}; expected 'binary' or 'macro'."
+        )
+    if average == "binary" and len(classes) > 2:
+        raise ValueError(
+            f"average='binary' requires <=2 classes, got {len(classes)}. "
+            "Use average='macro' for multiclass."
+        )
+    if average == "binary":
         if pos_label is None:
             pos_label = classes[-1]
         tp = np.sum((y_pred == pos_label) & (y_true == pos_label))
@@ -107,15 +137,30 @@ def f1_score(y_true: ArrayLike, y_pred: ArrayLike, average: str = "binary") -> f
     Args:
         y_true: Ground-truth labels.
         y_pred: Predicted labels.
-        average: ``"binary"`` or ``"macro"``.
+        average: ``"binary"`` or ``"macro"``. Raises ``ValueError`` for any
+            other value, and for ``"binary"`` when the data has more than 2
+            classes (use ``"macro"`` for multiclass).
 
     Returns:
         F1 score in ``[0.0, 1.0]``.
+
+    Raises:
+        ValueError: If ``average`` is not ``"binary"`` or ``"macro"``, or if
+            ``average="binary"`` is used with more than 2 classes.
     """
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
     classes = np.unique(np.concatenate([y_true, y_pred]))
-    if average == "binary" and len(classes) <= 2:
+    if average not in {"binary", "macro"}:
+        raise ValueError(
+            f"Unsupported average={average!r}; expected 'binary' or 'macro'."
+        )
+    if average == "binary" and len(classes) > 2:
+        raise ValueError(
+            f"average='binary' requires <=2 classes, got {len(classes)}. "
+            "Use average='macro' for multiclass."
+        )
+    if average == "binary":
         p = precision(y_true, y_pred, average="binary")
         r = recall(y_true, y_pred, average="binary")
         return float(2 * p * r / (p + r)) if (p + r) > 0 else 0.0

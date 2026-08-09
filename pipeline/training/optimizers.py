@@ -54,7 +54,8 @@ class SGD:
         Args:
             param: Parameter with ``.data`` and ``.grad`` populated.
         """
-        assert param.grad is not None, f"Parameter {param.name} has no gradient"
+        if param.grad is None:
+            raise ValueError(f"Parameter {param.name} has no gradient")
         param.data = param.data - self.lr * param.grad
 
 
@@ -66,8 +67,11 @@ class Adam:
     ``m_hat = m / (1 - beta1^t)``, ``v_hat = v / (1 - beta2^t)``
     ``w = w - lr * m_hat / (sqrt(v_hat) + eps)``
 
-    Each parameter gets its own ``m`` and ``v`` buffers (keyed by
-    ``id(param)``). The ``t`` counter is shared across all parameters.
+    Each parameter gets its own ``m``, ``v`` buffers and step counter
+    ``t`` (all keyed by ``id(param)``). Since :class:`NumpyOptimizer`
+    calls :meth:`update` exactly once per parameter on every ``step()``,
+    each parameter's ``t`` tracks the global step number, giving every
+    parameter the correct and identical bias-correction factor.
 
     Usage::
 
@@ -96,7 +100,7 @@ class Adam:
         self.eps = eps
         self._m: dict[int, np.ndarray] = {}
         self._v: dict[int, np.ndarray] = {}
-        self._t = 0
+        self._t: dict[int, int] = {}
 
     def update(self, param: Parameter) -> None:
         """Apply one Adam update step.
@@ -104,18 +108,21 @@ class Adam:
         Args:
             param: Parameter with ``.data`` and ``.grad`` populated.
         """
-        self._t += 1
-        assert param.grad is not None, f"Parameter {param.name} has no gradient"
+        if param.grad is None:
+            raise ValueError(f"Parameter {param.name} has no gradient")
         key = id(param)
         if key not in self._m:
             self._m[key] = np.zeros_like(param.data)
             self._v[key] = np.zeros_like(param.data)
 
+        self._t[key] = self._t.get(key, 0) + 1
+        t = self._t[key]
+
         grad = param.grad
         self._m[key] = self.beta1 * self._m[key] + (1 - self.beta1) * grad
         self._v[key] = self.beta2 * self._v[key] + (1 - self.beta2) * grad**2
 
-        m_hat = self._m[key] / (1 - self.beta1**self._t)
-        v_hat = self._v[key] / (1 - self.beta2**self._t)
+        m_hat = self._m[key] / (1 - self.beta1**t)
+        v_hat = self._v[key] / (1 - self.beta2**t)
 
         param.data = param.data - self.lr * m_hat / (np.sqrt(v_hat) + self.eps)

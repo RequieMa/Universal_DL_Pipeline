@@ -156,12 +156,16 @@ class ImageFolderDataSource(DataStream):
 
         for label_idx, subdir in enumerate(subdirs):
             class_names.append(subdir.name)
-            # Collect image files (common extensions only)
+            # Collect image files (common extensions only). Glob both cases
+            # (*.png and *.PNG); on case-insensitive filesystems (WSL2 DrvFs,
+            # macOS) both patterns match the same file, so dedupe via a set
+            # before sorting for deterministic order.
+            matches: set[Path] = set()
             for ext in (".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tiff", ".webp"):
-                for img_path in sorted(subdir.glob(f"*{ext}")):
-                    samples.append((img_path, label_idx))
-                for img_path in sorted(subdir.glob(f"*{ext.upper()}")):
-                    samples.append((img_path, label_idx))
+                matches.update(subdir.glob(f"*{ext}"))
+                matches.update(subdir.glob(f"*{ext.upper()}"))
+            for img_path in sorted(matches):
+                samples.append((img_path, label_idx))
 
         if not samples:
             raise ValueError(f"No image files found in {self.root_dir}")

@@ -72,6 +72,20 @@ class TestPrecision:
         result = precision(y_true, y_pred)
         assert result == 0.0
 
+    def test_precision_invalid_average_raises(self):
+        """Error: unsupported average must raise, not silently compute macro."""
+        y_true = np.array([0, 1, 0, 1])
+        y_pred = np.array([0, 1, 0, 1])
+        with pytest.raises(ValueError):
+            precision(y_true, y_pred, average="micro")
+
+    def test_precision_binary_multiclass_raises(self):
+        """Error: binary averaging with 3+ classes must raise, not downgrade."""
+        y_true = np.array([0, 1, 2, 0, 1, 2])
+        y_pred = np.array([0, 2, 2, 0, 1, 1])
+        with pytest.raises(ValueError):
+            precision(y_true, y_pred, average="binary")
+
 
 class TestRecall:
     """Tests for recall()."""
@@ -104,6 +118,20 @@ class TestRecall:
         result = recall(y_true, y_pred)
         assert result == 0.0
 
+    def test_recall_invalid_average_raises(self):
+        """Error: unsupported average must raise, not silently compute macro."""
+        y_true = np.array([0, 1, 0, 1])
+        y_pred = np.array([0, 1, 0, 1])
+        with pytest.raises(ValueError):
+            recall(y_true, y_pred, average="micro")
+
+    def test_recall_binary_multiclass_raises(self):
+        """Error: binary averaging with 3+ classes must raise, not downgrade."""
+        y_true = np.array([0, 1, 2, 0, 1, 2])
+        y_pred = np.array([0, 2, 2, 0, 1, 1])
+        with pytest.raises(ValueError):
+            recall(y_true, y_pred, average="binary")
+
 
 class TestF1Score:
     """Tests for f1_score()."""
@@ -134,6 +162,27 @@ class TestF1Score:
         # class 2: p=0.5, r=0.5, f1=0.5
         # macro = (1.0 + 0.5 + 0.5) / 3 approx 0.667
         assert 0.66 < result < 0.67
+
+    def test_f1_macro_multiclass_exact_value(self):
+        """Sanity: valid macro multiclass value is unchanged by validation."""
+        y_true = np.array([0, 1, 2, 0, 1, 2])
+        y_pred = np.array([0, 2, 2, 0, 1, 1])
+        # macro = (1.0 + 0.5 + 0.5) / 3 = 2/3
+        assert f1_score(y_true, y_pred, average="macro") == pytest.approx(2 / 3)
+
+    def test_f1_invalid_average_raises(self):
+        """Error: unsupported average must raise, not silently compute macro."""
+        y_true = np.array([0, 1, 0, 1])
+        y_pred = np.array([0, 1, 0, 1])
+        with pytest.raises(ValueError):
+            f1_score(y_true, y_pred, average="micro")
+
+    def test_f1_binary_multiclass_raises(self):
+        """Error: binary averaging with 3+ classes must raise, not downgrade."""
+        y_true = np.array([0, 1, 2, 0, 1, 2])
+        y_pred = np.array([0, 2, 2, 0, 1, 1])
+        with pytest.raises(ValueError):
+            f1_score(y_true, y_pred, average="binary")
 
 
 class TestConfusionMatrix:

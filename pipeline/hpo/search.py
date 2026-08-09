@@ -310,7 +310,11 @@ class OptunaSearch(BaseSearch):
         search = OptunaSearch(
             pipeline_cls=MyPipeline,
             base_config=Config(),
-            param_grid={"learning_rate": (1e-4, 1e-1), "batch_size": (8, 128)},
+            param_grid={
+                "learning_rate": (1e-4, 1e-1),  # float range -> suggest_float
+                "batch_size": (8, 128),          # int range   -> suggest_int
+                "optimizer": ["sgd", "adam"],    # list        -> suggest_categorical
+            },
             n_trials=20,
             scoring="accuracy",
         )
@@ -318,8 +322,10 @@ class OptunaSearch(BaseSearch):
 
     Parameters:
         param_grid: ``{name: (low, high)}`` or ``{name: [value, ...]}``.
-            Tuples define continuous ranges (sampled via ``suggest_float``);
-            sequences define categorical sets (sampled via
+            A ``(low, high)`` tuple whose endpoints are both ``int`` defines an
+            integer range (sampled via ``suggest_int``); a tuple with any
+            ``float`` endpoint defines a continuous range (sampled via
+            ``suggest_float``). A list defines a categorical set (sampled via
             ``suggest_categorical``).
         n_trials: Number of Optuna trials to run.
         direction: ``"maximize"`` (default) or ``"minimize"`` the scoring metric.
@@ -376,13 +382,22 @@ class OptunaSearch(BaseSearch):
             config = deepcopy(base.base_config)
             for name, space in base.param_grid.items():
                 if isinstance(space, tuple):
-                    config = _set_config_attr(config, name, trial.suggest_float(name, space[0], space[1]))
-                elif isinstance(space, (list, tuple)):
-                    config = _set_config_attr(config, name, trial.suggest_categorical(name, list(space)))
+                    low, high = space
+                    # Both endpoints int (and not bool) -> integer range.
+                    if _is_int(low) and _is_int(high):
+                        value = trial.suggest_int(name, low, high)
+                    else:
+                        value = trial.suggest_float(name, low, high)
+                    config = _set_config_attr(config, name, value)
+                elif isinstance(space, list):
+                    config = _set_config_attr(config, name, trial.suggest_categorical(name, space))
             try:
                 pipeline = pipeline_cls(config)
                 state = pipeline.run("train")
-                return float(state.metrics.get(scoring, 0.0))
+                # Metrics is not a dict — no .get(); fall back to 0.0 if absent.
+                if scoring in state.metrics:
+                    return float(state.metrics[scoring])
+                return 0.0
             except Exception:  # noqa: BLE001
                 _logger.warning("Optuna trial %d failed", trial.number, exc_info=True)
                 raise optuna.TrialPruned()
@@ -405,6 +420,11 @@ class OptunaSearch(BaseSearch):
     def _generate_configs(self):
         """Not used — :meth:`run` is overridden directly."""
         yield from ()
+
+
+def _is_int(value: Any) -> bool:
+    """True if ``value`` is a genuine int (bools excluded)."""
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 def _set_config_attr(config: Config, name: str, value: Any) -> Config:

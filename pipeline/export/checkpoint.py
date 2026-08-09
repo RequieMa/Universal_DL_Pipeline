@@ -73,6 +73,7 @@ class TorchCheckpoint:
 
         Raises:
             FileNotFoundError: If the checkpoint file doesn't exist.
+            TypeError: If ``state.model`` is not a TorchModel.
         """
         import torch  # type: ignore[import-not-found]
 
@@ -82,10 +83,15 @@ class TorchCheckpoint:
         if not path.exists():
             raise FileNotFoundError(f"Checkpoint not found: {path}")
 
-        checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+        if state.model is None or not isinstance(state.model, TorchModel):
+            raise TypeError(
+                "TorchCheckpoint.load expects state.model to be a TorchModel, "
+                f"got {type(state.model).__name__ if state.model else 'None'}"
+            )
 
-        if state.model is not None and isinstance(state.model, TorchModel):
-            state.model._module.load_state_dict(checkpoint["model_state_dict"])
+        checkpoint = torch.load(path, map_location="cpu", weights_only=True)
+
+        state.model._module.load_state_dict(checkpoint["model_state_dict"])
 
         if (
             "optimizer_state_dict" in checkpoint

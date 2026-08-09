@@ -77,7 +77,10 @@ class NumpyModel(ModelProtocol):
             inputs: Feature matrix, shape ``(batch_size, in_features)``.
 
         Returns:
-            Output logits, shape ``(batch_size, out_features)``.
+            Output logits, shape ``(batch_size, out_features)``. For a
+            classifier these are raw (unnormalized) class scores; callers
+            argmax over the last axis — argmax-equivalent to the
+            probabilities :class:`SklearnModel` returns.
         """
         x = np.asarray(inputs, dtype=np.float64)
         self._cache = {}

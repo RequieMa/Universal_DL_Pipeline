@@ -8,6 +8,7 @@ when the metric stops improving for a given number of epochs
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from pipeline.hooks.base import BaseHook
@@ -15,14 +16,24 @@ from pipeline.hooks.base import BaseHook
 if TYPE_CHECKING:
     from pipeline.pipeline import PipelineState
 
+_logger = logging.getLogger(__name__)
+
 
 class EarlyStopHook(BaseHook):
     """Stop training when a monitored metric stops improving.
 
-    At the end of each epoch this hook reads the latest value of a key in
-    ``state.history`` and compares it to the best value seen so far. When
-    the metric fails to improve for ``patience`` consecutive epochs it
-    sets ``state.should_stop = True`` so the training loop can halt early.
+    At the end of each epoch this hook compares the epoch's mean of the
+    monitored metric to the best value seen so far. When the metric fails
+    to improve for ``patience`` consecutive epochs it sets
+    ``state.should_stop = True`` so the training loop can halt early.
+
+    ``state.history[monitor]`` is a flat, per-batch list -- the training
+    loop appends one value per batch across every epoch. The hook averages
+    only the batches added since the previous epoch, so the decision is
+    driven by the epoch mean rather than the noisy final batch.
+
+    If the monitored key is missing from ``state.history`` the hook logs a
+    single warning and then behaves as a no-op (it never crashes training).
 
     The first epoch always records a baseline and never stops. Works with
     any framework: it only reads scalar values from ``state.history``, so
@@ -63,25 +74,30 @@ class EarlyStopHook(BaseHook):
         self.min_delta = min_delta
         self._counter = 0
         self._best: float | None = None
+        self._consumed = 0
+        self._warned_missing = False
 
     def on_epoch_end(self, epoch: int, state: PipelineState) -> None:
         """Check the monitored metric and decide whether to stop.
 
-        No-op when ``state.history`` is None or ``self.monitor`` is not a
-        key in it. Epoch 0 records a baseline and never stops.
+        No-op when ``state.history`` is None. If ``self.monitor`` is absent
+        a single warning is logged and the hook then no-ops. Epoch 0 records
+        a baseline and never stops.
 
         Args:
             epoch: Zero-based epoch index.
             state: Current pipeline state.
         """
-        if state.history is None or self.monitor not in state.history:
+        if state.history is None:
             return
 
-        series = state.history[self.monitor]
-        if not isinstance(series, list) or not series:
+        if self.monitor not in state.history:
+            self._warn_missing(state)
             return
 
-        current = float(series[-1])
+        current = self._epoch_metric(state)
+        if current is None:
+            return
 
         if self._best is None:
             # First observation: baseline, never stop.
@@ -112,3 +128,45 @@ class EarlyStopHook(BaseHook):
         if self.mode == "max":
             return current - best > self.min_delta
         return best - current > self.min_delta
+
+    def _epoch_metric(self, state: PipelineState) -> float | None:
+        """Return the mean of the monitored series over the current epoch.
+
+        ``state.history[monitor]`` is a flat, per-batch list. Each call
+        averages only the entries appended since the previous epoch and
+        advances an internal cursor. When no new entries were added (e.g.
+        the hook is driven over a pre-filled history) it falls back to the
+        mean of the whole series, so a one-value-per-epoch metric still maps
+        to that single value.
+
+        Args:
+            state: Current pipeline state.
+
+        Returns:
+            The epoch mean, or None when the series is empty or not a list.
+        """
+        series = state.history[self.monitor] if state.history else None
+        if not isinstance(series, list) or not series:
+            return None
+
+        new = series[self._consumed :]
+        self._consumed = len(series)
+        window = new if new else series
+        return sum(float(v) for v in window) / len(window)
+
+    def _warn_missing(self, state: PipelineState) -> None:
+        """Log a single warning naming the missing monitored key.
+
+        Args:
+            state: Current pipeline state.
+        """
+        if self._warned_missing:
+            return
+        self._warned_missing = True
+        available = sorted(state.history) if state.history else []
+        _logger.warning(
+            "EarlyStopHook: monitored key %r not found in state.history; "
+            "available keys: %s. Early stopping is disabled.",
+            self.monitor,
+            available,
+        )

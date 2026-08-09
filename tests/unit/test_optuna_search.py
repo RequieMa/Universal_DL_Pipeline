@@ -79,7 +79,10 @@ class _OptunaPipeline(BasePipeline):
         from pipeline.evaluation.metrics import Metrics
 
         lr = state.config.learning_rate
-        state.metrics = Metrics(accuracy=float(lr))
+        # Register a metric function (per the Metrics contract) and compute it.
+        metrics = Metrics(accuracy=lambda y_true, y_pred, _lr=lr: float(_lr))
+        metrics.compute(np.array([0]), np.array([0]))
+        state.metrics = metrics
 
     def export(self, state: PipelineState) -> None:
         state.predictions = np.array([0])
@@ -168,3 +171,57 @@ class TestOptunaSearch:
         result2 = s2.run()
         # At minimum both complete and produce trials
         assert len(result1.trials) == len(result2.trials)
+
+    def test_int_range_yields_integer_params(self) -> None:
+        """An int (low, high) tuple samples integers, not floats."""
+        grid = {"batch_size": (8, 128)}
+        search = OptunaSearch(
+            pipeline_cls=_OptunaPipeline,
+            base_config=Config(),
+            param_grid=grid,
+            n_trials=6,
+            scoring="accuracy",
+            seed=42,
+        )
+        result = search.run()
+        assert result.trials  # search produced at least one trial
+        for trial in result.trials:
+            value = trial.config.batch_size
+            assert isinstance(value, int)
+            assert not isinstance(value, bool)
+            assert 8 <= value <= 128
+
+    def test_float_range_yields_float_params(self) -> None:
+        """A tuple with a float endpoint samples floats."""
+        grid = {"learning_rate": (1e-4, 1e-1)}
+        search = OptunaSearch(
+            pipeline_cls=_OptunaPipeline,
+            base_config=Config(),
+            param_grid=grid,
+            n_trials=6,
+            scoring="accuracy",
+            seed=42,
+        )
+        result = search.run()
+        assert result.trials
+        for trial in result.trials:
+            value = trial.config.learning_rate
+            assert isinstance(value, float)
+            assert 1e-4 <= value <= 1e-1
+
+    def test_list_space_yields_categorical_choices(self) -> None:
+        """A list space samples only values drawn from that list."""
+        choices = [16, 32, 64]
+        grid = {"batch_size": choices}
+        search = OptunaSearch(
+            pipeline_cls=_OptunaPipeline,
+            base_config=Config(),
+            param_grid=grid,
+            n_trials=6,
+            scoring="accuracy",
+            seed=42,
+        )
+        result = search.run()
+        assert result.trials
+        for trial in result.trials:
+            assert trial.config.batch_size in choices

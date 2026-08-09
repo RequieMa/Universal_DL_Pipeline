@@ -40,6 +40,23 @@ class TestImageFolderConstruction:
         ds = ImageFolderDataSource(tiny_image_folder, batch_size=4)
         assert len(ds) == 2  # ceil(6/4) = 2
 
+    def test_glob_does_not_double_count(self, tmp_path: Path) -> None:
+        """Dual-glob (*.png and *.PNG) must not count a file twice.
+
+        On case-insensitive filesystems (WSL2 DrvFs, macOS) both the
+        lowercase and uppercase patterns match the same file. Listing
+        only globs paths — no PIL/image decoding — so this test needs
+        no real image bytes.
+        """
+        class_dir = tmp_path / "cat"
+        class_dir.mkdir()
+        (class_dir / "a.png").write_bytes(b"")
+        (class_dir / "b.png").write_bytes(b"")
+
+        ds = ImageFolderDataSource(tmp_path)
+        # Exactly the two files on disk — not 4 from the dual-glob union.
+        assert ds.n_samples == 2
+
 
 class TestImageFolderIteration:
     """__iter__ tests."""

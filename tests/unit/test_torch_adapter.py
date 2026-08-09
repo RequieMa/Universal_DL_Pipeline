@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -488,3 +490,90 @@ class TestTorchOptimizer:
         assert torch.allclose(torch_param.grad, torch.tensor([0.0, 0.0], dtype=torch.float32))
         # numpy param unchanged
         np.testing.assert_array_equal(numpy_param.grad, np.array([0.3, 0.4]))
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Device bridging tests
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@requires_torch
+class TestTorchModelDevice:
+    """TorchModel.forward moves input to the module's device."""
+
+    def test_numpy_input_lands_on_module_device(self) -> None:
+        """forward() with numpy input produces output on module's device."""
+        from pipeline.adapters.torch_adapter import TorchModel
+
+        module = torch.nn.Linear(4, 2)
+        model = TorchModel(module)
+        expected_device = model._device()
+
+        x_np = np.random.randn(3, 4).astype(np.float32)
+        # numpy input → numpy output; no error means device move succeeded
+        out = model.forward(x_np)
+        assert isinstance(out, np.ndarray)
+        assert out.shape == (3, 2)
+
+    def test_device_helper_returns_cpu_for_paramless_module(self) -> None:
+        """_device() falls back to CPU when module has no parameters."""
+        from pipeline.adapters.torch_adapter import TorchModel
+
+        model = TorchModel(torch.nn.Sequential())
+        assert model._device() == torch.device("cpu")
+
+    def test_device_helper_matches_module_param_device(self) -> None:
+        """_device() returns the same device as the module's first parameter."""
+        from pipeline.adapters.torch_adapter import TorchModel
+
+        module = torch.nn.Linear(4, 2)
+        model = TorchModel(module)
+        expected = next(module.parameters()).device
+        assert model._device() == expected
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TorchCheckpoint load symmetry tests
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@requires_torch
+class TestTorchCheckpointLoadSymmetry:
+    """TorchCheckpoint.load raises TypeError on wrong/missing model (mirrors save)."""
+
+    def test_load_raises_when_model_is_none(self, tmp_path: Path) -> None:
+        """load() raises TypeError when state.model is None."""
+        import torch
+
+        from pipeline.config import Config
+        from pipeline.export.checkpoint import TorchCheckpoint
+        from pipeline.pipeline import PipelineState
+
+        # Write a minimal valid checkpoint
+        ckpt = tmp_path / "dummy.pt"
+        torch.save({"model_state_dict": {}, "epoch": 0}, ckpt)
+
+        state = PipelineState(config=Config())
+        state.model = None
+        with pytest.raises(TypeError, match="TorchModel"):
+            TorchCheckpoint.load(state, ckpt)
+
+    def test_load_raises_when_model_is_wrong_type(self, tmp_path: Path) -> None:
+        """load() raises TypeError when state.model is not a TorchModel."""
+        import torch
+
+        from pipeline.config import Config
+        from pipeline.export.checkpoint import TorchCheckpoint
+        from pipeline.pipeline import PipelineState
+
+        ckpt = tmp_path / "dummy.pt"
+        torch.save({"model_state_dict": {}, "epoch": 0}, ckpt)
+
+        state = PipelineState(config=Config())
+
+        class FakeModel:
+            pass
+
+        state.model = FakeModel()  # type: ignore[assignment]
+        with pytest.raises(TypeError, match="TorchModel"):
+            TorchCheckpoint.load(state, ckpt)

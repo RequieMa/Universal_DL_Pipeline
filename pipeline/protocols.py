@@ -183,11 +183,20 @@ class ModelProtocol(ABC):
     def forward(self, inputs: ArrayLike) -> ArrayLike:
         """Run a forward pass and return predictions.
 
+        Convention for classifiers: return per-class scores of shape
+        ``(batch_size, n_classes)``, and callers pick the label with
+        ``argmax`` over the last axis. Adapters differ only in whether
+        those scores are normalized: :class:`~pipeline.adapters.SklearnModel`
+        returns probabilities (rows sum to 1), while the numpy and torch
+        adapters return raw logits. Both are argmax-equivalent, so any
+        caller that argmaxes over the class axis works with either.
+
         Args:
             inputs: Feature matrix of shape ``(batch_size, *feature_dims)``.
 
         Returns:
-            Predictions of shape ``(batch_size, *output_dims)``.
+            Predictions of shape ``(batch_size, *output_dims)``. For
+            classifiers this is ``(batch_size, n_classes)`` class scores.
         """
         ...
 

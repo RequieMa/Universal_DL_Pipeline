@@ -128,9 +128,10 @@ class TestTextDataSourceIteration:
             df.to_csv(f, index=False)
             path = f.name
         source = TextDataSource(path, batch_size=2)
-        # __len__ floors at 1; __iter__ yields nothing
-        assert len(source) == 1
+        # __len__ must agree with the number of batches __iter__ yields.
+        assert len(source) == 0
         assert list(source) == []
+        assert len(source) == len(list(source))
 
 
 class TestTextDataSourceEdgeCases:
