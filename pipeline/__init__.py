@@ -15,11 +15,13 @@ Subpackages:
     - :mod:`pipeline.registry` — dependency injection registry
     - :mod:`pipeline.hooks` — hook system for cross-cutting concerns
     - :mod:`pipeline.config` — configuration dataclass
-    - :mod:`pipeline.data` — data sources (CsvDataSource) and split utilities
+    - :mod:`pipeline.data` — data sources (CsvDataSource, ImageFolderDataSource,
+      TransformedDataStream) and split utilities
     - :mod:`pipeline.training` — train loop, optimizers (SGD, Adam), losses (MSE, CrossEntropy)
     - :mod:`pipeline.evaluation` — metrics container and pure metric functions
     - :mod:`pipeline.export` — CSV and checkpoint export utilities
-    - :mod:`pipeline.adapters` — framework adapters (SklearnModel, NumpyModel, NumpyOptimizer)
+    - :mod:`pipeline.adapters` — framework adapters (SklearnModel, NumpyModel,
+      NumpyOptimizer, TorchModel, TorchLoss, TorchOptimizer)
     - :mod:`pipeline.utils` — device, seed utilities
 """
 

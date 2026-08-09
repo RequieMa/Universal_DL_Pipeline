@@ -13,6 +13,7 @@ Fakes defined here:
 
 Fixtures (pytest fixtures):
     - :func:`tiny_titanic_path` — path to the tiny_titanic.csv fixture
+    - :func:`tiny_image_folder` — temp dir with 3 classes, 2 PNG images each
 """
 
 from __future__ import annotations
@@ -195,3 +196,40 @@ def tiny_titanic_path() -> Path:
         Path to the fixture CSV file.
     """
     return Path(__file__).resolve().parent.parent / "fixtures" / "tiny_titanic.csv"
+
+
+@pytest.fixture
+def tiny_image_folder(tmp_path: Path) -> Path:
+    """Create a temporary image folder with 3 classes, 2 images each.
+
+    Structure::
+
+        tmp_path/
+        ├── cat/
+        │   ├── 01.png
+        │   └── 02.png
+        ├── dog/
+        │   ├── 01.png
+        │   └── 02.png
+        └── bird/
+            ├── 01.png
+            └── 02.png
+
+    Each image is a 4×4 RGB PNG with distinct pixel values so tests
+    can verify class→label mapping and batch shapes.
+
+    Returns:
+        Path to the root directory (tmp_path).
+    """
+    from PIL import Image
+
+    classes = ["cat", "dog", "bird"]
+    for label_idx, class_name in enumerate(classes):
+        class_dir = tmp_path / class_name
+        class_dir.mkdir()
+        for img_idx in range(2):
+            # Each image has pixels = label_idx for verification
+            data = bytes([label_idx * 64 + img_idx * 32] * 4 * 4 * 3)
+            img = Image.frombytes("RGB", (4, 4), data)
+            img.save(class_dir / f"{img_idx + 1:02d}.png")
+    return tmp_path

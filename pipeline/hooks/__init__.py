@@ -14,6 +14,8 @@ Usage::
 from __future__ import annotations
 
 from pipeline.hooks.base import BaseHook
+from pipeline.hooks.checkpoint import CheckpointHook
+from pipeline.hooks.early_stop import EarlyStopHook
 from pipeline.hooks.progress import ProgressHook
 
-__all__ = ["BaseHook", "ProgressHook"]
+__all__ = ["BaseHook", "CheckpointHook", "EarlyStopHook", "ProgressHook"]

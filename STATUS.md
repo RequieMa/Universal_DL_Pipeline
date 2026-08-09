@@ -1,10 +1,11 @@
-# Project Status — 2026-08-01
+# Project Status — 2026-08-08
+
 
 ## Where we are
 
-Phase 2 (Table Adapters) **complete**. Phase 1 (Pipeline Framework) **complete**.
-283 tests passing, 1 skipped (torch). Pipeline `v0.2.0` — sklearn + numpy adapters
-ready, M1/M2/M3 example notebooks written.
+M6/M7 (LLM Fine-Tune + Serve) **complete**. Phase 6 (Text + NLP) **complete**. Phase 2 (Table Adapters) **complete**.
+331 tests passing, 5 skipped (sklearn on system python). Pipeline `v0.2.0` — sklearn,
+numpy, and torch adapters ready, M1/M2/M3/M4 example notebooks written.
 
 ## What was built (Phase 1 + 2)
 
@@ -17,7 +18,9 @@ pipeline/
 ├── registry.py           # flat-dict DI: @register / build
 ├── config.py             # Config dataclass (YAML, env, kwargs)
 ├── data/
-│   ├── csv_source.py     # CsvDataSource — CSV → Batch iterator
+│   ├── csv_source.py     # CsvDataSource
+│   ├── image_folder.py   # NEW (Phase 3) — ImageFolderDataSource
+│   ├── transforms.py     # NEW (Phase 3) — TransformedDataStream — CSV → Batch iterator
 │   ├── split.py          # train_test_split() → (train_stream, val_stream)
 │   └── utils.py          # collect_arrays() — drain DataStream → (X, y)
 ├── training/
@@ -31,9 +34,11 @@ pipeline/
 ├── hooks/
 │   ├── base.py           # BaseHook — five hook points, all no-ops
 │   └── progress.py       # ProgressHook — tqdm progress bar
-├── adapters/             # NEW (Phase 2)
+├── adapters/             # NEW (Phase 2+3)
 │   ├── sklearn_adapter.py # SklearnModel, StubLoss, StubOptimizer
-│   └── numpy_adapter.py   # NumpyModel, NumpyOptimizer
+│   ├── numpy_adapter.py   # NumpyModel, NumpyOptimizer
+│   └── torch_adapter.py   # NEW (Phase 3) — TorchModel, TorchLoss, TorchOptimizer
+  │   └── torch_adapter.py   # NEW (Phase 3) — TorchModel, TorchLoss, TorchOptimizer
 └── utils/                # device.py, seed.py
 run.py                    # CLI: --config --mode [train|infer]
 ```
@@ -60,13 +65,17 @@ tests/
 │   ├── test_optimizers.py    # 10 tests: 5 SGD + 5 Adam (Phase 2)
 │   ├── test_losses.py        # 15 tests: 7 MSE + 8 CrossEntropy (Phase 2)
 │   ├── test_numpy_adapter.py # 17 tests: 12 NumpyModel + 5 NumpyOptimizer (Phase 2)
+│   ├── test_image_folder.py  # NEW (Phase 3) — 12 tests
+│   ├── test_transforms.py    # NEW (Phase 3) — 6 tests
+│   ├── test_torch_adapter.py # NEW (Phase 3) — 31 tests
 │   └── conftest.py           # shared test doubles
 ├── contract/                 # (Phase 2)
 │   └── test_model_contract.py # 6 tests: SklearnModel + NumpyModel contract
 ├── fixtures/
 │   └── tiny_titanic.csv      # 10 rows, committed
 └── integration/
-    └── test_pipeline_e2e.py  # 2 tests: train mode + infer mode
+    ├── test_pipeline_e2e.py  # 2 tests: train mode + infer mode
+    └── test_torch_e2e.py     # NEW (Phase 3) — 3 tests: torch pipeline + image folder E2E
 ```
 
 ## Examples (Phase 2)
@@ -75,9 +84,12 @@ tests/
 examples/
 ├── m1-sklearn/
 │   └── titanic.ipynb          # sklearn LogisticRegression on Titanic
-└── m2-m3-numpy/
-    └── gradient_to_mlp.ipynb  # Act 1: sympy gradient → manual GD
-                               # Act 2: numpy MLP + CrossEntropyLoss + Adam on Titanic
+├── m2-m3-numpy/
+    │   └── gradient_to_mlp.ipynb
+├── m4a-torch-mnist/
+    │   └── mnist.ipynb     # NEW (Phase 3)
+└── m4b-torch-cifar10/
+        └── cifar10.ipynb  # NEW (Phase 3)
 ```
 
 ## Tooling
@@ -85,7 +97,7 @@ examples/
 - **Env:** `uv` (`uv sync --dev`, `uv run pytest`, `uv run ruff check .`)
 - **Build:** hatchling (`uv build --wheel` → only `pipeline/` in wheel)
 - **Docs:** Material for MkDocs + mkdocstrings (`uv run mkdocs build`)
-- **CI:** 283 tests in ~0.8s — well under 60s target
+- **CI:** 331 tests in ~1.9s — well under 60s target
 
 ## Completion gate ✅
 
@@ -97,6 +109,29 @@ examples/
 - [x] Core works without sklearn: `python -c "from pipeline import BasePipeline"`
 - [x] 100% TDD coverage for all new Phase 2 modules
 - [x] ruff clean, mypy strict (stub warnings expected on py3.13)
+- [x] All Phase 3 imports: `ImageFolderDataSource`, `TransformedDataStream`, `TorchModel`, `TorchLoss`, `TorchOptimizer`
+- [x] Contract tests parametrized over SklearnModel, NumpyModel, TorchModel (9 tests)
+- [x] Core works without torch: `python -c "from pipeline.data.image_folder import ImageFolderDataSource"`
+- [x] MNIST notebook executes (>95%) | CIFAR-10 notebook executes (>70%)
+- [x] TDD coverage for all new Phase 3 modules
+- [x] TorchCheckpoint save/load with model+optimizer+epoch+history
+- [x] BasePipeline default export() writes predictions CSV
+- [x] load_checkpoint stage added to infer mode flow
+- [x] CheckpointHook saves latest.pt and best.pt per epoch
+- [x] EarlyStopHook stops training when metric plateaus
+- [x] 26 new tests (9 unit checkpoint + 7 early_stop + 4 checkpoint hook + 3 contract + 3 integration)
+- [x] ruff clean, backward compatible (existing subclasses unchanged)
+- [x] GridSearch (Cartesian product) + RandomSearch (sampling without replacement) + OptunaSearch (TPE)
+- [x] VotingEnsemble (hard/soft) + StackingEnsemble (meta-model)
+- [x] 40 new tests (18 search + 14 ensemble + 3 integration + 5 optuna)
+- [x] Zero new framework dependencies — pure Python + numpy
+- [x] TextDataSource (CSV text→Batch) matching CsvDataSource pattern
+- [x] SimpleTokenizer (fit/encode/decode, PAD/UNK, min_freq, max_vocab)
+- [x] M5 IMDB sentiment notebook (LSTM, 80.7% accuracy)
+- [x] 24 new tests (12 text_source + 12 tokenizer)
+- [x] distilgpt2 LoRA fine-tune notebook (147K trainable params, 5 epochs, loss 4.08→2.59)
+- [x] FastAPI serve.py with OpenAI-compatible /v1/chat/completions endpoint
+- [x] Zero pipeline/ module changes — M6/M7 is examples-only
 
 ## Phase roadmap
 
@@ -107,9 +142,13 @@ Phase 1  ✅ DONE — Pipeline framework (CsvDataSource, TrainTestSplit, TrainLo
 Phase 2  ✅ DONE — Table adapters: sklearn + numpy → M1/M2/M3
                   (SklearnModel, NumpyModel, SGD, Adam, MSELoss, CrossEntropyLoss,
                    NumpyOptimizer, StubLoss/Optimizer, collect_arrays, contract tests)
-Phase 3  NEXT  — Image + TorchAdapter → M4
-Phase 4         — Export + Inference (production-grade)
+Phase 3  ✅ DONE — Image + TorchAdapter → M4
+Phase 6  ✅ DONE — Text + NLP → M5 (TextDataSource, SimpleTokenizer, IMDB LSTM)
+Phase 5  ✅ DONE — HPO + Ensemble (GridSearch, RandomSearch, VotingEnsemble,
+                  StackingEnsemble, SearchResult, BaseSearch)
+Phase 4  ✅ DONE — Checkpoint + Inference (TorchCheckpoint, CheckpointHook, EarlyStopHook,
+                  load_checkpoint stage, default export)
 Phase 5         — HPO + Ensemble
-Phase 6         — Sequences / NLP → M5
-M6/M7           — LLM, add-only (no API changes)
+Phase 6  ✅ DONE — Text + NLP → M5 (TextDataSource, SimpleTokenizer, IMDB LSTM notebook)
+M6/M7  ✅ DONE — LLM fine-tune + serve (distilgpt2 notebook + FastAPI serve.py)
 ```

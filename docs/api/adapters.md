@@ -16,3 +16,12 @@
       members:
         - NumpyModel
         - NumpyOptimizer
+
+## Torch Adapter
+
+::: pipeline.adapters.torch_adapter
+    options:
+      members:
+        - TorchModel
+        - TorchLoss
+        - TorchOptimizer

@@ -15,11 +15,15 @@ is instantiated, not when the module loads.
 
 from pipeline.adapters.numpy_adapter import NumpyModel, NumpyOptimizer
 from pipeline.adapters.sklearn_adapter import SklearnModel, StubLoss, StubOptimizer
+from pipeline.adapters.torch_adapter import TorchLoss, TorchModel, TorchOptimizer
 
 __all__ = [
+    "NumpyModel",
+    "NumpyOptimizer",
     "SklearnModel",
     "StubLoss",
     "StubOptimizer",
-    "NumpyModel",
-    "NumpyOptimizer",
+    "TorchLoss",
+    "TorchModel",
+    "TorchOptimizer",
 ]

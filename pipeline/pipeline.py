@@ -147,9 +147,9 @@ class BasePipeline(ABC):
     def run(self, mode: Literal["train", "infer"] = "train") -> PipelineState:
         """Execute the pipeline.
 
-        In train mode, runs all six stages. In infer mode, skips
-        feature extraction, model building, training, and evaluation
-        -- only loads data and exports predictions.
+        In train mode, runs all six stages. In infer mode, builds the
+        model, loads a checkpoint, and exports predictions -- training,
+        feature extraction, and evaluation are skipped.
 
         Args:
             mode: ``"train"`` or ``"infer"``.
@@ -162,11 +162,18 @@ class BasePipeline(ABC):
         # Stage 1: always needed (both train and infer need data)
         self._run_stage("load_data", state, self.load_data)
 
+        # Stage 3: model construction runs in both modes (infer needs a
+        # model to run forward passes on loaded data).
+        if mode in ("train", "infer"):
+            self._run_stage("build_model", state, self.build_model)
+
+        if mode == "infer":
+            # Load trained weights into the freshly-built model.
+            self._run_stage("load_checkpoint", state, self.load_checkpoint)
+
         if mode == "train":
             # Stage 2: feature extraction (default: pass-through)
             self._run_stage("extract_features", state, self.extract_features)
-            # Stage 3: model construction (DI entry point)
-            self._run_stage("build_model", state, self.build_model)
             # Stage 4: training loop
             self._run_stage("train", state, self.train)
             # Stage 5: evaluation on validation set
@@ -239,12 +246,48 @@ class BasePipeline(ABC):
         ``state.metrics``.
         """
 
-    @abstractmethod
+    def load_checkpoint(self, state: PipelineState) -> None:
+        """Load model weights from a checkpoint.
+
+        Default is no-op. Override to load trained weights from disk in
+        infer mode (or to resume training). Called after
+        :meth:`build_model` when ``mode == "infer"``.
+
+        Usage::
+
+            def load_checkpoint(self, state):
+                TorchCheckpoint.load(state, "checkpoints/best.pt")
+        """
+
     def export(self, state: PipelineState) -> None:
-        """Stage 6: Save model checkpoints and write predictions.
+        """Stage 6: Write predictions to CSV.
+
+        Default implementation iterates validation data, runs a forward
+        pass, and writes predictions to ``{output_dir}/predictions.csv``.
+        Override for custom export (ONNX, checkpoint-only, etc.).
 
         Assign ``state.predictions`` with model outputs on test data.
         """
+        from pathlib import Path
+
+        import numpy as np
+
+        from pipeline.export.to_csv import to_csv
+
+        if state.model is None or state.val_data_stream is None:
+            return
+
+        state.model.eval_mode()
+        all_preds = []
+        for batch in state.val_data_stream:
+            p = np.asarray(state.model.forward(batch.inputs))
+            all_preds.append(p.reshape(len(batch.targets), -1))
+
+        state.predictions = np.concatenate(all_preds, axis=0)
+
+        output_dir = Path(state.config.output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        to_csv(state.predictions, output_dir / "predictions.csv")
 
     # ── Hook dispatch ───────────────────────────────────────────────
     def _run_stage(

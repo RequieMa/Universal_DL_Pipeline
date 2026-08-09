@@ -14,6 +14,27 @@
       members:
         - train_test_split
 
+## ImageFolderDataSource
+
+::: pipeline.data.image_folder
+    options:
+      members:
+        - ImageFolderDataSource
+
+## TransformedDataStream
+
+::: pipeline.data.transforms
+    options:
+      members:
+        - TransformedDataStream
+
+## TextDataSource
+
+::: pipeline.data.text_source
+    options:
+      members:
+        - TextDataSource
+
 ## collect_arrays
 
 ::: pipeline.data.utils

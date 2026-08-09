@@ -21,6 +21,13 @@ try:
 except ImportError:
     _HAS_SKLEARN = False
 
+try:
+    import torch  # noqa: F401
+
+    _HAS_TORCH = True
+except ImportError:
+    _HAS_TORCH = False
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -164,6 +171,61 @@ def _make_numpy_pipeline(csv_path: str):
     return NumpyPipeline(config)
 
 
+def _make_torch_pipeline(csv_path: str):
+    """Build a pipeline with TorchModel on tabular data."""
+    import torch.nn as nn
+
+    from pipeline.adapters.torch_adapter import TorchLoss, TorchModel, TorchOptimizer
+    from pipeline.config import Config
+    from pipeline.data.csv_source import CsvDataSource
+    from pipeline.data.split import train_test_split
+    from pipeline.evaluation.metrics import Metrics, accuracy
+    from pipeline.pipeline import BasePipeline, PipelineState
+
+    config = Config(
+        batch_size=4,
+        num_epochs=5,
+        train_ratio=0.75,
+        learning_rate=0.1,
+        seed=42,
+        output_dir=f"{Path(csv_path).parent}/output_torch",
+    )
+
+    class TorchPipeline(BasePipeline):
+        """Torch Linear model on Titanic test subset."""
+
+        def load_data(self, state: PipelineState) -> None:
+            source = CsvDataSource(csv_path, batch_size=config.batch_size, shuffle=False)
+            train, val = train_test_split(source, train_ratio=config.train_ratio)
+            state.data_stream = train
+            state.val_data_stream = val
+
+        def build_model(self, state: PipelineState) -> None:
+            module = nn.Linear(3, 2)
+            state.model = TorchModel(module)
+            state.loss_fn = TorchLoss("CrossEntropyLoss", model=state.model)
+            state.optimizer = TorchOptimizer(
+                state.model.parameters(), "SGD", lr=config.learning_rate
+            )
+            state.metrics = Metrics(accuracy=accuracy)
+
+        def evaluate(self, state: PipelineState) -> None:
+            state.model.eval_mode()
+            all_preds, all_targets = [], []
+            for batch in state.val_data_stream:
+                logits = np.asarray(state.model.forward(batch.inputs))
+                all_preds.append(np.argmax(logits, axis=1))
+                all_targets.append(np.asarray(batch.targets))
+            y_pred = np.concatenate(all_preds)
+            y_true = np.concatenate(all_targets)
+            state.metrics.compute(y_true, y_pred)
+
+        def export(self, state: PipelineState) -> None:
+            state.predictions = np.array([0])
+
+    return TorchPipeline(config)
+
+
 # ---------------------------------------------------------------------------
 # Pipeline builders registry
 # ---------------------------------------------------------------------------
@@ -174,6 +236,8 @@ def _get_pipeline_builders() -> dict[str, Callable]:
     builders: dict[str, Callable] = {"numpy": _make_numpy_pipeline}
     if _HAS_SKLEARN:
         builders["sklearn"] = _make_sklearn_pipeline
+    if _HAS_TORCH:
+        builders["torch"] = _make_torch_pipeline
     return builders
 
 

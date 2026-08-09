@@ -1,0 +1,101 @@
+text,label
+How to create a list in Python?,"Use square brackets: my_list = [1, 2, 3] or call list() for an empty list."
+How do you make an empty list?,Call list() or use empty square brackets: my_list = [].
+How to add an item to a list?,"Use the append method, like my_list.append(5), to add an item to the end."
+How to get the length of a list?,"Use the built-in len() function, for example len(my_list)."
+How to access the last element of a list?,"Use index -1, like my_list[-1], which points to the final item."
+How to sort a list?,"Use sorted(my_list) to return a new sorted list, or my_list.sort() to sort in place."
+How to create a dictionary in Python?,"Use curly braces with key-value pairs, like my_dict = {'name': 'Ada'}."
+How to add a key-value pair to a dictionary?,"Assign to the key, for example my_dict['year'] = 1815."
+How to check if a key exists in a dictionary?,"Use the in operator, for example 'name' in my_dict."
+How to iterate over a dictionary?,"Use for key, value in my_dict.items() to get both key and value each loop."
+How to write a for loop in Python?,Use 'for item in iterable:' followed by indented code. For example: for x in range(10): print(x)
+How to write a while loop in Python?,"Use 'while condition:' and update the condition inside the loop, like while n > 0: n -= 1."
+How to loop over a list and print each item?,Write 'for item in my_list: print(item)' to visit every element.
+How to loop from 1 to 5 in Python?,"Use range(1, 6) in a for loop, since range stops before the final number."
+How to break out of a loop in Python?,Use the break statement to exit the loop immediately.
+How to skip to the next iteration of a loop?,Use the continue statement to jump to the next iteration.
+How to define a function in Python?,"Use 'def name(parameters):' followed by indented body, for example def add(a, b): return a + b."
+How to return a value from a function?,"Use the return statement, like return result, to send a value back to the caller."
+How to call a function in Python?,"Use the function name with parentheses, for example result = add(2, 3)."
+How to define a function with a default argument?,"Use an equals sign in the signature, like def greet(name='world') to give name a default."
+How to pass an arbitrary number of arguments to a function?,Use *args to accept extra positional arguments as a tuple.
+How to create a recursive function in Python?,Define a function that calls itself with a smaller input and a base case to stop.
+How to print text in Python?,"Use the print() function, for example print('Hello, world!')."
+How to print two values separated by a space?,"Pass them to print with a comma, like print(a, b), which inserts a space."
+How to print a newline in Python?,Use the escape sequence \n inside a string to start a new line.
+How to format a string with variables in Python?,"Use an f-string, like print(f'The sum is {total}'), to insert variables."
+How to print multiple values on the same line?,"Use the end parameter, for example print(x, end=' ') to avoid a newline."
+How to import just one function from a module?,Use from math import sqrt to import only the sqrt function.
+How to import a module under an alias?,Use 'import numpy as np' to refer to numpy as np throughout your code.
+How to convert a string to lowercase?,"Use the .lower() method, for example text.lower()."
+How to split a string into a list of words?,"Use .split(), for example text.split() splits on whitespace."
+How to join a list of strings together?,"Use '.'.join(words) style, where the string before join separates the items."
+How to check if a string starts with a prefix?,"Use the .startswith(prefix) method, which returns True or False."
+How to strip whitespace from a string?,Use .strip() to remove leading and trailing whitespace.
+How to replace substring in a string?,"Use .replace(old, new) to substitute every occurrence of old with new."
+How to get the length of a string?,Use len(text) to count the number of characters.
+How to check if a substring is inside a string?,"Use the in operator, for example 'cat' in 'concatenate' returns True."
+How to read a file in Python?,"Use 'with open(filename, 'r') as f: content = f.read()' to safely read the entire file contents."
+How to write text to a file?,"Use 'with open(filename, 'w') as f: f.write(text)' to overwrite the file with text."
+How to read a file line by line?,"Iterate over the file object, for example 'for line in open(filename):'."
+How to append text to a file?,"Open the file in append mode with 'a', then call f.write(text)."
+What is 2 plus 2?,2 plus 2 equals 4.
+What is 5 plus 7?,5 plus 7 equals 12.
+What is 9 plus 9?,9 plus 9 equals 18.
+What is 7 times 8?,7 times 8 is 56.
+What is 6 times 7?,6 times 7 is 42.
+What is 3 times 9?,3 times 9 is 27.
+What is 5 times 7?,5 times 7 is 35.
+What is 8 times 8?,8 times 8 is 64.
+What is 4 squared?,"4 squared is 16, because 4 times 4 equals 16."
+What is 12 divided by 4?,12 divided by 4 is 3.
+What is 100 divided by 10?,100 divided by 10 is 10.
+What is the square root of 16?,The square root of 16 is 4.
+What is the square root of 49?,The square root of 49 is 7.
+What is the value of pi?,"Pi is the ratio of a circle's circumference to its diameter, approximately 3.14159."
+What is the value of e?,"Euler's number e is approximately 2.71828, the base of natural logarithms."
+What is the first prime number?,"The first prime number is 2, the only even prime."
+What is the next prime after 10?,The prime number just after 10 is 11.
+How many sides does a triangle have?,A triangle has 3 sides.
+How many degrees are in a straight line?,A straight line measures 180 degrees.
+What is the sum of angles in a triangle?,The interior angles of a triangle always add up to 180 degrees.
+What is 10 times 10?,10 times 10 is 100.
+What is half of 30?,Half of 30 is 15.
+What is 100 minus 37?,100 minus 37 equals 63.
+What is the capital of France?,The capital of France is Paris.
+What is the capital of Japan?,The capital of Japan is Tokyo.
+What is the capital of Australia?,The capital of Australia is Canberra.
+What is the capital of Canada?,The capital of Canada is Ottawa.
+What is the capital of Brazil?,The capital of Brazil is Brasilia.
+What is the capital of Egypt?,The capital of Egypt is Cairo.
+What is the capital of the United Kingdom?,The capital of the United Kingdom is London.
+What is the capital of Italy?,The capital of Italy is Rome.
+What is the capital of Germany?,The capital of Germany is Berlin.
+What is the capital of India?,The capital of India is New Delhi.
+What is the capital of Spain?,The capital of Spain is Madrid.
+What is the capital of Russia?,The capital of Russia is Moscow.
+Which planet is closest to the Sun?,Mercury is the closest planet to the Sun.
+What is the largest planet in our solar system?,Jupiter is the largest planet in the solar system.
+Which planet is known as the Red Planet?,Mars is known as the Red Planet because of its iron oxide surface.
+How many planets are in our solar system?,There are 8 planets in our solar system.
+What is the second planet from the Sun?,Venus is the second planet from the Sun.
+Which planet has the rings in our solar system?,Saturn is the planet famous for its prominent rings.
+What is the farthest planet from the Sun?,Neptune is the farthest planet from the Sun.
+Which planet is called Earth's twin?,Venus is sometimes called Earth's twin due to its similar size.
+What is the chemical symbol for water?,"Water is H2O, composed of two hydrogen atoms and one oxygen atom."
+What is the chemical symbol for gold?,"The chemical symbol for gold is Au, from the Latin aurum."
+What is the chemical symbol for oxygen?,The chemical symbol for oxygen is O.
+What is the chemical symbol for carbon?,The chemical symbol for carbon is C.
+What is the lightest element?,"Hydrogen is the lightest element, with atomic number 1."
+What is the chemical symbol for iron?,"The chemical symbol for iron is Fe, from the Latin ferrum."
+What is the symbol for helium?,Helium is the noble gas with the symbol He.
+What is the chemical symbol for sodium?,The chemical symbol for sodium is Na.
+In what year did World War II end?,World War II ended in 1945.
+How many continents are there?,"There are 7 continents: Africa, Antarctica, Asia, Europe, North America, Oceania, and South America."
+What is Python?,"Python is a high-level, interpreted programming language known for its readability and versatility."
+What is machine learning?,Machine learning is a field of AI where computers learn patterns from data without being explicitly programmed.
+What is a prime number?,A prime number is a whole number greater than 1 that is divisible only by 1 and itself.
+What is artificial intelligence?,Artificial intelligence is the field of building systems that perform tasks that normally require human intelligence.
+Explain what a function is in programming.,A function is a reusable block of code that performs a specific task when called.
+Define what a variable is in Python.,"A variable is a named reference that stores a value, like x = 5."

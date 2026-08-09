@@ -45,15 +45,22 @@ nav:
       - Registry: api/registry.md
       - Hooks: api/hooks.md
       - Data: api/data.md
+      - Tokenizer: api/tokenizer.md
       - Training: api/training.md
       - Evaluation: api/evaluation.md
       - Export: api/export.md
       - Adapters: api/adapters.md
+      - HPO: api/hpo.md
       - Utils: api/utils.md
   - Design:
       - Architecture Spec: superpowers/specs/2026-07-28-pipeline-architecture-design.md
       - Phase 1 Framework: superpowers/specs/2026-07-29-phase-1-framework-design.md
       - Phase 2 Table Adapters: superpowers/specs/2026-07-30-phase-2-table-adapters-design.md
+      - Phase 3 Image + Torch: superpowers/specs/2026-08-08-phase3-image-torch-design.md
+      - Phase 4 Checkpoint + Inference: superpowers/specs/2026-08-08-phase4-checkpoint-inference-design.md
+      - Phase 5 HPO + Ensemble: superpowers/specs/2026-08-08-phase5-hpo-ensemble-design.md
+      - Phase 6 Text + NLP: superpowers/specs/2026-08-08-phase6-text-nlp-design.md
+      - M6 LLM Fine-Tune + Serve: superpowers/specs/2026-08-09-m6-llm-finetune-serve-design.md
 
 markdown_extensions:
   - pymdownx.highlight:

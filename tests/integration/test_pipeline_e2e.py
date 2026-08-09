@@ -172,8 +172,9 @@ class TestPipelineE2E:
         """Happy Path: run('infer') skips training stages.
 
         Verifies that in infer mode:
-        - model is not built (None)
-        - history is not populated (None)
+        - load_data and build_model run (model is built)
+        - load_checkpoint runs (no-op by default)
+        - history is not populated (None) -- train is skipped
         - current_epoch stays at 0
         - export still runs and predictions are available
         """
@@ -203,8 +204,28 @@ class TestPipelineE2E:
                     state.val_data_stream = val
 
                 def build_model(self, state: PipelineState) -> None:
-                    """Stage 3: no-op in infer mode."""
-                    pass
+                    """Stage 3: build a minimal model for inference."""
+                    import numpy as np
+
+                    class _FakeModel:
+                        """Trivial model returning random predictions."""
+
+                        def forward(self, inputs: np.ndarray) -> np.ndarray:
+                            return np.random.random(len(inputs))
+
+                        def parameters(self) -> list:
+                            return []
+
+                        def train_mode(self) -> None:
+                            pass
+
+                        def eval_mode(self) -> None:
+                            pass
+
+                    state.model = _FakeModel()
+
+                def load_checkpoint(self, state: PipelineState) -> None:
+                    """Load weights from disk in infer mode (no-op here)."""
 
                 def evaluate(self, state: PipelineState) -> None:
                     """Stage 5: no-op in infer mode."""
@@ -223,8 +244,9 @@ class TestPipelineE2E:
             pipeline = InferPipeline(config)
             state = pipeline.run("infer")
 
-            # In infer mode, training-related fields remain at defaults
-            assert state.model is None
+            # build_model and load_checkpoint run in infer mode; model is built
+            assert state.model is not None
+            # Training-related fields remain at defaults (train is skipped)
             assert state.history is None
             assert state.current_epoch == 0
             # But export still ran
