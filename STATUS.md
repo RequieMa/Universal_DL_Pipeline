@@ -121,9 +121,9 @@ examples/
 - [x] EarlyStopHook stops training when metric plateaus
 - [x] 26 new tests (9 unit checkpoint + 7 early_stop + 4 checkpoint hook + 3 contract + 3 integration)
 - [x] ruff clean, backward compatible (existing subclasses unchanged)
-- [x] GridSearch (Cartesian product) + RandomSearch (sampling without replacement)
+- [x] GridSearch (Cartesian product) + RandomSearch (sampling without replacement) + OptunaSearch (TPE)
 - [x] VotingEnsemble (hard/soft) + StackingEnsemble (meta-model)
-- [x] 35 new tests (18 search + 14 ensemble + 3 integration)
+- [x] 40 new tests (18 search + 14 ensemble + 3 integration + 5 optuna)
 - [x] Zero new framework dependencies — pure Python + numpy
 - [x] TextDataSource (CSV text→Batch) matching CsvDataSource pattern
 - [x] SimpleTokenizer (fit/encode/decode, PAD/UNK, min_freq, max_vocab)
