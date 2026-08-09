@@ -3,7 +3,7 @@
 
 ## Where we are
 
-Phase 6 (Text + NLP) **complete**. Phase 5 (HPO + Ensemble) **complete**. Phase 2 (Table Adapters) **complete**.
+M6/M7 (LLM Fine-Tune + Serve) **complete**. Phase 6 (Text + NLP) **complete**. Phase 2 (Table Adapters) **complete**.
 331 tests passing, 5 skipped (sklearn on system python). Pipeline `v0.2.0` — sklearn,
 numpy, and torch adapters ready, M1/M2/M3/M4 example notebooks written.
 
@@ -129,6 +129,9 @@ examples/
 - [x] SimpleTokenizer (fit/encode/decode, PAD/UNK, min_freq, max_vocab)
 - [x] M5 IMDB sentiment notebook (LSTM, 80.7% accuracy)
 - [x] 24 new tests (12 text_source + 12 tokenizer)
+- [x] distilgpt2 LoRA fine-tune notebook (147K trainable params, 5 epochs, loss 4.08→2.59)
+- [x] FastAPI serve.py with OpenAI-compatible /v1/chat/completions endpoint
+- [x] Zero pipeline/ module changes — M6/M7 is examples-only
 
 ## Phase roadmap
 
@@ -147,5 +150,5 @@ Phase 4  ✅ DONE — Checkpoint + Inference (TorchCheckpoint, CheckpointHook, E
                   load_checkpoint stage, default export)
 Phase 5         — HPO + Ensemble
 Phase 6  ✅ DONE — Text + NLP → M5 (TextDataSource, SimpleTokenizer, IMDB LSTM notebook)
-M6/M7           — LLM, add-only (no API changes)
+M6/M7  ✅ DONE — LLM fine-tune + serve (distilgpt2 notebook + FastAPI serve.py)
 ```

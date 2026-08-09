@@ -60,6 +60,7 @@ nav:
       - Phase 4 Checkpoint + Inference: superpowers/specs/2026-08-08-phase4-checkpoint-inference-design.md
       - Phase 5 HPO + Ensemble: superpowers/specs/2026-08-08-phase5-hpo-ensemble-design.md
       - Phase 6 Text + NLP: superpowers/specs/2026-08-08-phase6-text-nlp-design.md
+      - M6 LLM Fine-Tune + Serve: superpowers/specs/2026-08-09-m6-llm-finetune-serve-design.md
 
 markdown_extensions:
   - pymdownx.highlight:
