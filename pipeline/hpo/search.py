@@ -1,11 +1,12 @@
 """Hyperparameter search over pipeline configurations.
 
 Defines a framework-agnostic search framework that trains a :class:`BasePipeline`
-subclass across many configurations and reports the best one. Two concrete
+subclass across many configurations and reports the best one. Three concrete
 strategies are provided:
 
     - :class:`GridSearch` — exhaustive Cartesian product over a parameter grid.
     - :class:`RandomSearch` — random sampling without replacement from a grid.
+    - :class:`OptunaSearch` — Bayesian optimization via Optuna (optional dependency).
 
 Each trial constructs a fresh pipeline via ``pipeline_cls(config)``, runs it in
 train mode, and scores it with the metric named by ``scoring``. Trial failures
@@ -290,3 +291,124 @@ class RandomSearch(BaseSearch):
         for key, value in combo.items():
             setattr(config, key, value)
         return config
+
+
+class OptunaSearch(BaseSearch):
+    """Bayesian hyperparameter search via Optuna.
+
+    Uses Optuna's TPE sampler (by default) for intelligent exploration of the
+    search space. Each trial is an Optuna study step; the sampler learns from
+    previous trials and prioritises promising regions of the hyperparameter
+    space.
+
+    Optuna is an **optional** dependency — import it separately
+    (``pip install optuna``). The class can be imported without it; the
+    import only happens inside ``_generate_configs``.
+
+    Usage::
+
+        search = OptunaSearch(
+            pipeline_cls=MyPipeline,
+            base_config=Config(),
+            param_grid={"learning_rate": (1e-4, 1e-1), "batch_size": (8, 128)},
+            n_trials=20,
+            scoring="accuracy",
+        )
+        result = search.run()
+
+    Parameters:
+        param_grid: ``{name: (low, high)}`` or ``{name: [value, ...]}``.
+            Tuples define continuous ranges (sampled via ``suggest_float``);
+            sequences define categorical sets (sampled via
+            ``suggest_categorical``).
+        n_trials: Number of Optuna trials to run.
+        direction: ``"maximize"`` (default) or ``"minimize"`` the scoring metric.
+        sampler: Optional Optuna sampler (defaults to ``TPESampler(seed=seed)``).
+        seed: Random seed for reproducibility.
+        kwargs: Forwarded to :class:`BaseSearch`.
+    """
+
+    def __init__(
+        self,
+        param_grid: Mapping[str, Any],
+        n_trials: int,
+        direction: str = "maximize",
+        sampler: Any = None,
+        seed: int = 42,
+        **kwargs: Any,
+    ) -> None:
+        if not param_grid:
+            raise ValueError("param_grid must contain at least one hyperparameter")
+        if n_trials < 1:
+            raise ValueError("n_trials must be a positive integer")
+        super().__init__(**kwargs)
+        self.param_grid = param_grid
+        self._n_trials = n_trials
+        self._direction = direction
+        self._sampler = sampler
+        self._seed = seed
+
+    def run(self) -> SearchResult:
+        """Run Bayesian search via Optuna, collecting trial results.
+
+        Overrides :meth:`BaseSearch.run` so that Optuna controls trial
+        evaluation — the sampler learns from scores in real time rather
+        than only after all configs are generated.
+
+        Returns:
+            :class:`SearchResult` with a trial per completed Optuna step.
+        """
+        import optuna  # type: ignore[import-not-found]
+
+        if self._sampler is None:
+            self._sampler = optuna.samplers.TPESampler(seed=self._seed)
+
+        study = optuna.create_study(
+            direction=self._direction,
+            sampler=self._sampler,
+        )
+
+        base = self
+        pipeline_cls = self.pipeline_cls
+        scoring = self.scoring
+
+        def objective(trial: Any) -> float:
+            config = deepcopy(base.base_config)
+            for name, space in base.param_grid.items():
+                if isinstance(space, tuple):
+                    config = _set_config_attr(config, name, trial.suggest_float(name, space[0], space[1]))
+                elif isinstance(space, (list, tuple)):
+                    config = _set_config_attr(config, name, trial.suggest_categorical(name, list(space)))
+            try:
+                pipeline = pipeline_cls(config)
+                state = pipeline.run("train")
+                return float(state.metrics.get(scoring, 0.0))
+            except Exception:  # noqa: BLE001
+                _logger.warning("Optuna trial %d failed", trial.number, exc_info=True)
+                raise optuna.TrialPruned()
+
+        study.optimize(objective, n_trials=self._n_trials)
+
+        trials: list[TrialResult] = []
+        for opt_trial in study.trials:
+            if opt_trial.state == optuna.trial.TrialState.COMPLETE and opt_trial.value is not None:
+                config = deepcopy(base.base_config)
+                for name, value in opt_trial.params.items():
+                    config = _set_config_attr(config, name, value)
+                trials.append(TrialResult(
+                    trial_id=opt_trial.number,
+                    config=config,
+                    score=opt_trial.value,
+                ))
+        return SearchResult(trials=trials, scoring=scoring)
+
+    def _generate_configs(self):
+        """Not used — :meth:`run` is overridden directly."""
+        yield from ()
+
+
+def _set_config_attr(config: Config, name: str, value: Any) -> Config:
+    """Set one attribute on a copy, keeping the original intact."""
+    new = deepcopy(config)
+    setattr(new, name, value)
+    return new

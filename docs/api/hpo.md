@@ -8,6 +8,7 @@
         - BaseSearch
         - GridSearch
         - RandomSearch
+        - OptunaSearch
         - SearchResult
         - TrialResult
 
