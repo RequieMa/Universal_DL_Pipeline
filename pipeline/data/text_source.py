@@ -26,7 +26,8 @@ class TextDataSource(DataStream):
     Reads a CSV with a text column and a label column into a pandas
     DataFrame, optionally shuffles rows, and yields batches as
     :class:`Batch` objects. ``inputs`` is a ``list[str]`` of raw texts;
-    ``targets`` is an ``np.ndarray[int64]`` of labels.
+    ``targets`` is an ``np.ndarray[int64]`` of labels when every label is
+    numeric, otherwise an ``np.ndarray[object]`` of the raw (string) labels.
 
     The pattern mirrors :class:`~pipeline.data.csv_source.CsvDataSource`.
 
@@ -102,6 +103,29 @@ class TextDataSource(DataStream):
             words.update(str(text).split())
         return words
 
+    @staticmethod
+    def _to_numeric_if_possible(column: pd.Series) -> np.ndarray:
+        """Cast a label column to int64 when every value is numeric.
+
+        Many text tasks (e.g., M5 IMDB sentiment) use integer labels, so
+        those stay ``np.ndarray[int64]``. Instruction data (e.g., M6) uses
+        free-text responses, which must be preserved as strings — this
+        returns them as an ``np.ndarray[object]`` of raw values instead of
+        forcing a (crashing) int cast.
+
+        Args:
+            column: A pandas Series of label values.
+
+        Returns:
+            The labels as an int64 array when numeric, otherwise the raw
+            values as an object array.
+        """
+        labels = column.to_numpy(dtype=object)
+        try:
+            return labels.astype(np.int64)
+        except (ValueError, TypeError):
+            return labels
+
     def __iter__(self) -> Iterator[Batch]:
         """Yield one :class:`Batch` per batch window with ``list[str]`` inputs."""
         df = self._load()
@@ -113,7 +137,7 @@ class TextDataSource(DataStream):
             batch_idx = indices[start : start + self.batch_size]
             batch_df = df.iloc[batch_idx]
             texts = [str(t) for t in batch_df[self.text_column]]
-            labels = batch_df[self.label_column].to_numpy(dtype=np.int64)
+            labels = self._to_numeric_if_possible(batch_df[self.label_column])
             yield Batch(inputs=texts, targets=labels)
 
     def __len__(self) -> int:
