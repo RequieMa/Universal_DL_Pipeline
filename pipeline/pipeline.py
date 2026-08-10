@@ -170,8 +170,7 @@ class BasePipeline(ABC):
         if mode == "infer":
             # Load trained weights into the freshly-built model.
             self._run_stage("load_checkpoint", state, self.load_checkpoint)
-
-        if mode == "train":
+        elif mode == "train":
             # Stage 2: feature extraction (default: pass-through)
             self._run_stage("extract_features", state, self.extract_features)
             # Stage 4: training loop
